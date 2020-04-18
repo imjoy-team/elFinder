@@ -1,0 +1,4 @@
+include README.md
+include LICENSE.md
+graft imjoy_elfinder
+recursive-exclude * *.py[co]
