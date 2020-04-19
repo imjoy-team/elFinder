@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 __all__ = ['path']
-path = os.path.dirname(__file__)
+path = Path(__file__).parent
