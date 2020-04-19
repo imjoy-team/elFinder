@@ -1,7 +1,11 @@
 var data = self.data;
-if (data.memory) {
-  Tiff.initialize({ TOTAL_MEMORY: data.memory });
+
+var tiffData = data.data
+if(data.name.endsWith('.gz')){
+  tiffData = pako.inflate(tiffData)
 }
-var tiff = new Tiff({buffer: data.data});
-var image = tiff.readRGBAImage();
-self.res = { image: image, width: tiff.width(), height: tiff.height() };
+
+var ifds = UTIF.decode(tiffData);
+UTIF.decodeImage(tiffData, ifds[0])
+var image  = UTIF.toRGBA8(ifds[0]);  // Uint8Array with RGBA pixels
+self.res = { image: image, width: ifds[0].width, height: ifds[0].height };

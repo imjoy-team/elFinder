@@ -214,8 +214,8 @@ elFinder.prototype.commands.quicklook.plugins = [
 								};
 								wk.onerror = err;
 								wk.postMessage({
-									scripts: [fm.options.cdns.tiff, fm.getWorkerUrl('quicklook.tiff.js')],
-									data: { data: data }
+									scripts: [fm.options.cdns.utif, fm.options.cdns.pako, fm.getWorkerUrl('quicklook.tiff.js')],
+									data: { data: data, name: file.name }
 								});
 							} catch(e) {
 								err(e);

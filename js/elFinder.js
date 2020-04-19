@@ -1056,7 +1056,7 @@ var elFinder = function(elm, opts, bootCallback) {
 						break;
 					}
 				} catch (ex) {
-					window.console && window.console.log && window.console.log(ex);
+					window.console && window.console.error && window.console.error(ex);
 				}
 				
 			}
@@ -1070,7 +1070,7 @@ var elFinder = function(elm, opts, bootCallback) {
 							break;
 						}
 					} catch (ex) {
-						window.console && window.console.log && window.console.log(ex);
+						window.console && window.console.error && window.console.error(ex);
 					}
 				}
 			}
@@ -1210,9 +1210,13 @@ var elFinder = function(elm, opts, bootCallback) {
 
 				// Delay 'visibility' check it required for browsers such as Safari
 				requestAnimationFrame(function() {
+					var cssUrl = baseUrl+'css/elfinder.min.css';
 					if (node.css('visibility') === 'hidden') {
+						if(self.extraQuery){
+							cssUrl = cssUrl+ '?' + self.extraQuery
+						}
 						// load CSS
-						self.loadCss([baseUrl+'css/elfinder.min.css'], {
+						self.loadCss([cssUrl], {
 							dfd: $.Deferred().done(function() {
 								loaded();
 							}).fail(function() {
@@ -2076,6 +2080,9 @@ var elFinder = function(elm, opts, bootCallback) {
 			if (!download || this.isSameOrigin(url)) {
 				if (url) {
 					url += (url.match(/\?/)? '&' : '?') + '_'.repeat((url.match(/[\?&](_+)t=/g) || ['&t=']).sort().shift().match(/[\?&](_*)t=/)[1].length + 1) + 't=' + (file.ts || parseInt(+new Date()/1000));
+					if(self.options.file_base_url){
+						url = self.options.file_base_url + url;
+					}
 					if (callback) {
 						callback(url);
 						return;
@@ -2184,6 +2191,9 @@ var elFinder = function(elm, opts, bootCallback) {
 							url += ((n++ === 0)? '' : '&') + encodeURIComponent(key) + '=' + encodeURIComponent(val);
 						});
 					}
+				}
+				if(self.options.file_base_url){
+					url = self.options.file_base_url + url;
 				}
 				return { url: url, className: cls };
 			}
@@ -2734,6 +2744,9 @@ var elFinder = function(elm, opts, bootCallback) {
 					self.trigger(cmd + 'fail', response);
 					errMsg = (typeof error === 'object')? error.error : error;
 					if (errMsg) {
+						if(response && response.debug && response.debug.exception){
+							console.error(response.debug.exception)
+						}
 						deffail ? self.error(errMsg) : self.debug('error', self.i18n(errMsg));
 					}
 					syncOnFail && self.sync();
@@ -4076,6 +4089,14 @@ var elFinder = function(elm, opts, bootCallback) {
 			this.transport.init(this);
 		}
 	}
+
+	// extra query for transport
+	if(this.options.extraQuery){
+		this.extraQuery = this.options.extraQuery.startsWith('&')?this.options.extraQuery.slice(1):this.options.extraQuery;
+	}
+	else{
+		this.extraQuery = null;
+	}
 	
 	if (typeof(this.transport.send) != 'function') {
 		this.transport.send = function(opts) {
@@ -4088,6 +4109,14 @@ var elFinder = function(elm, opts, bootCallback) {
 					}
 					return opts._xhr;
 				};
+			}
+			if(self.extraQuery){
+				if(opts.url.includes('?')){
+					opts.url = opts.url + '&' + self.extraQuery
+				}
+				else{
+					opts.url = opts.url + '?' + self.extraQuery
+				}
 			}
 			return $.ajax(opts);
 		};
@@ -9823,7 +9852,7 @@ elFinder.prototype = {
 		}
 		$.each(urls, function(i, url) {
 			var link, df;
-			url = self.convAbsUrl(url).replace(/^https?:/i, '');
+			// url = self.convAbsUrl(url).replace(/^https?:/i, '');
 			if (dfds) {
 				dfds[i] = $.Deferred();
 			}
@@ -10487,6 +10516,8 @@ elFinder.prototype = {
 		if (showlog || (d && (d === 'all' || d[type]))) {
 			window.console && window.console.log && window.console.log('elfinder debug: ['+type+'] ['+this.id+']', m);
 		}
+		if(type === 'error')
+			throw new Error(m)
 
 		return this;
 	},
