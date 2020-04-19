@@ -373,7 +373,9 @@ task('misc', function(){
 		.concat(files['php'])
 		.concat(files['misc'])
 		.concat(path.join(src, 'files', '.gitignore'))
-		.concat(path.join(src, 'files', '.trash', '.gitignore'));
+		.concat(path.join(src, 'files', '.trash', '.gitignore'))
+		.concat(path.join(src, 'package.json'))
+		.concat(path.join(src, '__init__.py'));
 	for (i in cf)
 	{
 		var dst = cf[i].replace(src, '').substr(1);

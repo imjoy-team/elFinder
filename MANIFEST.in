@@ -1,4 +1,5 @@
 include README.md
 include LICENSE.md
+include package.json
 graft elfinder_client
 recursive-exclude * *.py[co]
