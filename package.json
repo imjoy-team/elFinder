@@ -4,7 +4,7 @@
   "description": "File manager for web",
   "main": "Jakefile.js",
   "scripts": {
-    "build": "mkdir -p ./imjoy_elfinder && jake -C ./imjoy_elfinder elfinder"
+    "build": "mkdir -p ./elfinder_client && jake -C ./elfinder_client elfinder"
   },
   "repository": {
     "type": "git",

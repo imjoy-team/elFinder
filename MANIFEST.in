@@ -1,4 +1,4 @@
 include README.md
 include LICENSE.md
-graft imjoy_elfinder
+graft elfinder_client
 recursive-exclude * *.py[co]
