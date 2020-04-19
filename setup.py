@@ -9,14 +9,14 @@ PACKAGE_JSON = json.loads((PROJECT_DIR / "package.json").read_text())
 
 
 setup(
-    name="imjoy-elfinder",
+    name="elfinder-client",
     version=PACKAGE_JSON["version"],
-    description="ImJoy elFinder",
+    description="Static files for the elFinder file browser",
     url="https://github.com/imjoy-team/elFinder/",
     author="imjoy-team",
     author_email="imjoy.team@gmail.com",
     license="BSD-3",
-    packages=find_packages(include=["imjoy_elfinder", "imjoy_elfinder.*"]),
+    packages=find_packages(include=["elfinder_client", "elfinder_client.*"]),
     include_package_data=True,
     zip_safe=False,
 )
