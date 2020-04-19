@@ -527,7 +527,7 @@
 				coverHide();
 				win.css(clcss || closedCss(node))
 					.show()
-					.animate(openedCss(), 550, function() {
+					.animate(openedCss(), 100, function() {
 						open(opened);
 						navShow();
 					});
@@ -563,7 +563,7 @@
 					state = animated;
 					win.hasClass(fullscreen) && fsicon.click();
 					(hash && (node = cwd.find('#'+hash)).length)
-						? win.animate(closedCss(node), 500, function() {
+						? win.animate(closedCss(node), 100, function() {
 							preview.off('changesize');
 							close(closed, true);
 						})

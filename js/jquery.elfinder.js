@@ -363,7 +363,10 @@ $.fn.elfinder = function(o, o2) {
 		
 		if (!elfinder) {
 			if ($.isPlainObject(o)) {
-				new elFinder(this, o, bootCallback);
+				window.elfinder = new elFinder(this, o, bootCallback);
+				if(window.elfinder.options.onReady){
+					window.elfinder.options.onReady(window.elfinder)
+				}
 			}
 		} else {
 			switch(cmd) {
@@ -390,7 +393,10 @@ $.fn.elfinder = function(o, o2) {
 							elfinder.reloadCallback(opts, bootCallback);
 						} else {
 							elfinder.destroy();
-							new elFinder(this, opts, bootCallback);
+							window.elfinder = new elFinder(this, opts, bootCallback);
+							if(window.elfinder.options.onReady){
+								window.elfinder.options.onReady(window.elfinder)
+							}
 						}
 					}
 					break;
