@@ -1,3 +1,4 @@
+npm run build
 pip install -U twine
 pip install -U wheel
 pip install -U setuptools
