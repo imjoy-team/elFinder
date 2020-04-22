@@ -48,3 +48,4 @@ jobs:
           deploy_key: ${{ secrets.ACTION_DEPLOY_KEY }}
           publish_dir: ./elfinder_client
           commit_message: Deploy to GitHub Pages
+          allow_empty_commit: true
