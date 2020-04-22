@@ -26,3 +26,25 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
     - run: npm run build
+    - name: Save build output
+      uses: actions/upload-artifact@v1
+      with:
+        name: built-output
+        path: ./elfinder_client
+
+  deploy-gh-pages:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Load saved build output
+        uses: actions/download-artifact@v1
+        with:
+          name: built-output
+          path: ./elfinder_client
+      - name: Deploy assets to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3.5.0
+        with:
+          deploy_key: ${{ secrets.ACTION_DEPLOY_KEY }}
+          publish_dir: ./elfinder_client
+          commit_message: Deploy to GitHub Pages
