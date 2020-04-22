@@ -45,7 +45,7 @@ jobs:
       - name: Deploy assets to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3.5.0
         with:
-          deploy_key: ${{ secrets.ACTION_DEPLOY_KEY }}
+          deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
           publish_dir: ./elfinder_client
           commit_message: Deploy to GitHub Pages
           allow_empty_commit: true
