@@ -80,6 +80,7 @@ var dirmode = 0755,
 		'misc':
 			[
 				path.join(src, 'js', 'proxy', 'elFinderSupportVer1.js'),
+				path.join(src, 'js', 'proxy', 'elFinderSupportBrowserFS.js'),
 				path.join(src, 'Changelog'),
 				path.join(src, 'LICENSE.md'),
 				path.join(src, 'README.md'),
@@ -93,6 +94,7 @@ var dirmode = 0755,
 		'misc-minimal' :
 			[
 				path.join(src, 'js', 'proxy', 'elFinderSupportVer1.js'),
+				path.join(src, 'js', 'proxy', 'elFinderSupportBrowserFS.js'),
 				path.join(src, 'Changelog'),
 				path.join(src, 'LICENSE.md'),
 				path.join(src, 'README.md'),

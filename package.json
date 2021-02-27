@@ -5,7 +5,7 @@
   "main": "Jakefile.js",
   "scripts": {
     "build": "mkdir -p ./elfinder_client && jake -C ./elfinder_client elfinder",
-    "serve": "nodemon --ignore ./elfinder_client --exec \"jake -C ./elfinder_client serve\""
+    "serve": "nodemon --ext html,js --ignore ./js/proxy --ignore ./elfinder_client --ignore ./node_modules --exec \"npx webpack --config webpack.config.js && jake -C ./elfinder_client serve\""
   },
   "repository": {
     "type": "git",
@@ -29,7 +29,17 @@
   "devDependencies": {
     "csso": "<2.0.0",
     "jake": "~8.0.12",
+    "nodemon": "^2.0.7",
     "uglify-js": "~2.6.2",
-    "nodemon": "^2.0.7"
+    "webpack": "^4.5.0",
+    "webpack-cli": "^4.5.0"
+  },
+  "dependencies": {
+    "browser-mime": "git+https://github.com/humphd/browser-mime.git",
+    "browserfs": "^1.4.3",
+    "jimp": "^0.16.1",
+    "jszip": "^3.6.0",
+    "lzutf8": "^0.6.0",
+    "underscore": "^1.12.0"
   }
 }
