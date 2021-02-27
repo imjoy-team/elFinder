@@ -233,6 +233,15 @@ task({'elfinder': ['clean', 'prebuild', 'css/elfinder.min.css', 'js/elfinder.min
 	console.log('elFinder build done');
 });
 
+desc('start server');
+task({'serve':['elfinder']}, function () {
+	copyFile('./elfinder.html', './index.html');
+	jake.exec(['python3 -m http.server 9876'], {interactive: true, printStdout: true, printStderr: true}, function () {
+		console.log('Server started');
+		complete();
+	});
+});
+
 desc('minimal build elFinder');
 task({'elfinder-minimal': ['clean', 'prebuild', 'css/elfinder.min.css', 'js/elfinder-minimal.min.js', 'misc-minimal']}, function(){
 	console.log('elFinder build done');

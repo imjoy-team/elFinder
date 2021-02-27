@@ -4,7 +4,8 @@
   "description": "File manager for web",
   "main": "Jakefile.js",
   "scripts": {
-    "build": "mkdir -p ./elfinder_client && jake -C ./elfinder_client elfinder"
+    "build": "mkdir -p ./elfinder_client && jake -C ./elfinder_client elfinder",
+    "serve": "nodemon --ignore ./elfinder_client --exec \"jake -C ./elfinder_client serve\""
   },
   "repository": {
     "type": "git",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "csso": "<2.0.0",
     "jake": "~8.0.12",
-    "uglify-js": "~2.6.2"
+    "uglify-js": "~2.6.2",
+    "nodemon": "^2.0.7"
   }
 }
