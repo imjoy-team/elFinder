@@ -139,8 +139,7 @@ api.archive = function(opts, res) {
 			.then(function() {
 				return _private.info(path.join(target.absolutePath, opts.name));
 			})
-			.then(function(info) {
-				debugger
+			.then(function(info) {x
 				resolve({
 					added: [info]
 				});
@@ -152,9 +151,9 @@ api.archive = function(opts, res) {
 }
 
 api.dim = function(opts, res) {
-	return new Promise(function(resolve, reject) {
+	return new Promise(async function(resolve, reject) {
 		var target = _private.decode(opts.target);
-		Jimp.read(target.absolutePath)
+		Jimp.read(await fs.readFile(target.absolutePath))
 			.then(function(img) {
 				resolve({
 					dim: img.bitmap.width + 'x' + img.bitmap.height
@@ -518,9 +517,9 @@ api.rename = function(opts, res) {
 }
 
 api.resize = function(opts, res) {
-	return new Promise(function(resolve, reject) {
+	return new Promise(async function(resolve, reject) {
 		var target = _private.decode(opts.target);
-		Jimp.read(target.absolutePath)
+		Jimp.read(await fs.readFile(target.absolutePath))
 			.then(function(image) {
 				if (opts.mode == 'resize') {
 					image = image.resize(parseInt(opts.width), parseInt(opts.height))
@@ -533,7 +532,15 @@ api.resize = function(opts, res) {
 					}
 				}
 				image.quality(parseInt(opts.quality))
-					.write(target.absolutePath);
+					.getBase64('image/png', async (err, res) => {
+						if(err){
+							console.error(err)
+							return
+						}
+						const base64Response = await fetch(res);
+						const blob = await base64Response.blob();
+						await writeFile(path.join(config.tmbroot, op + ".png"), blob);
+					}) 
 				return _private.info(target.absolutePath);
 			})
 			.then(function(info) {
@@ -632,15 +639,18 @@ api.tmb = function(opts, res) {
 		}
 		//create.
 		var tasks = [];
-		each(files, function(file) {
-			tasks.push(Jimp.read(file)
+		for(let file of files){
+			tasks.push(Jimp.read(await fs.readFile(file))
 				.then(function(img) {
 					var op = _private.encode(file);
-					img.resize(48, 48)
-						.write(path.join(config.tmbroot, op + ".png"));
-					return Promise.resolve(op);
+					img.resize(48, 48).getBase64('image/png', async (err, res) => {
+						const base64Response = await fetch(`data:image/png;base64,${res}`);
+						const blob = await base64Response.blob();
+						await writeFile(path.join(config.tmbroot, op + ".png"), blob);
+						return Promise.resolve(op)
+					}) 
 				}));
-		})
+		}
 		Promise.all(tasks)
 			.then(function(hashes) {
 				var rtn = {};
