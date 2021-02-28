@@ -73,12 +73,6 @@ function initBrowserFS() {
 
 
 
-let fs, path;
-initBrowserFS().then((bfs)=>{
- console.log('BrowserFS initialized successfully.')
- fs = bfs.fs
- path = bfs.path
-})
 
 export const api = {};
 const _private = {};
@@ -111,6 +105,16 @@ config.acl = function(path) {
 	};
 
 }
+
+
+let fs, path;
+initBrowserFS().then((bfs)=>{
+ console.log('BrowserFS initialized successfully.')
+ fs = bfs.fs
+ path = bfs.path
+
+ fs.mkdir( config.tmbroot );
+})
 
 
 function writeFile(path, file) {
@@ -539,7 +543,7 @@ api.resize = function(opts, res) {
 						}
 						const base64Response = await fetch(res);
 						const blob = await base64Response.blob();
-						await writeFile(path.join(config.tmbroot, op + ".png"), blob);
+						await writeFile(path.join(config.tmbroot, target.name + ".png"), blob);
 					}) 
 				return _private.info(target.absolutePath);
 			})
@@ -644,7 +648,7 @@ api.tmb = function(opts, res) {
 				.then(function(img) {
 					var op = _private.encode(file);
 					img.resize(48, 48).getBase64('image/png', async (err, res) => {
-						const base64Response = await fetch(`data:image/png;base64,${res}`);
+						const base64Response = await fetch(res);
 						const blob = await base64Response.blob();
 						await writeFile(path.join(config.tmbroot, op + ".png"), blob);
 						return Promise.resolve(op)
