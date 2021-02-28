@@ -50,6 +50,15 @@ function initBrowserFS() {
                             return fn.apply(_fs, newargs);
                         }
                         else{
+							//  fs.exists has no error passed to the callback
+							if(name ===  'exists'){
+								return new Promise((resolve, reject)=>{
+									newargs.push((data)=>{
+										resolve(data)
+									})
+									fn.apply(_fs, newargs);
+								})
+							}
                             return new Promise((resolve, reject)=>{
                                 newargs.push((err, data)=>{
                                     if(err) reject(err)
@@ -74,7 +83,7 @@ function initBrowserFS() {
 
 
 
-export const api = {};
+export const api = {mime: mime};
 const _private = {};
 const roots = [{
     url: "/tmp/",       //Required
@@ -112,10 +121,10 @@ initBrowserFS().then((bfs)=>{
  console.log('BrowserFS initialized successfully.')
  fs = bfs.fs
  path = bfs.path
-
+ api.fs = fs
+ api.path = path
  fs.mkdir( config.tmbroot );
 })
-
 
 function writeFile(path, file) {
     return new Promise((resolve, reject) => {
@@ -848,10 +857,15 @@ _private.info = function(p) {
 			if (r.mime.indexOf('image/') == 0) {
 				var filename = _private.encode(p);
 				var tmbPath = path.join(config.tmbroot, filename + ".png");
-				if (await fs.exists(tmbPath)) {
-					r.tmb = filename + '.png';
-				} else {
-					r.tmb = "1";
+				try{
+					if (await fs.exists(tmbPath)) {
+						r.tmb = filename + '.png';
+					} else {
+						r.tmb = "1";
+					}
+				}
+				catch(e){
+					console.error(e)
 				}
 			}
 
