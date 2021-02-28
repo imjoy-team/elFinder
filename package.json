@@ -4,7 +4,7 @@
   "description": "File manager for web",
   "main": "Jakefile.js",
   "scripts": {
-    "build": "mkdir -p ./elfinder_client && jake -C ./elfinder_client elfinder",
+    "build": "npx webpack --config webpack.config.js --mode production && mkdir -p ./elfinder_client && jake -C ./elfinder_client elfinder",
     "serve": "nodemon --ext html,js --ignore ./js/proxy --ignore ./js/lib --ignore ./elfinder_client --ignore ./node_modules --exec \"npx webpack --config webpack.config.js && jake -C ./elfinder_client serve\" --trace"
   },
   "repository": {

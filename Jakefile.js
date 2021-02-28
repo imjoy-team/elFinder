@@ -237,12 +237,12 @@ task('prebuild', function(){
 desc('build elFinder');
 task({'elfinder': ['clean', 'prebuild', 'css/elfinder.min.css', 'js/elfinder.min.js', 'misc', 'js/extras', 'js/worker']}, function(){
 	copyFile('./js/lib/service-worker.js', './service-worker.js');
+	copyFile('./elfinder.html', './index.html');
 	console.log('elFinder build done');
 });
 
 desc('start server');
 task({'serve':['elfinder']}, function () {
-	copyFile('./elfinder.html', './index.html');
 	jake.exec(['python3 -m http.server 9876'], {interactive: true, printStdout: true, printStderr: true}, function () {
 		console.log('Server started');
 		complete();
