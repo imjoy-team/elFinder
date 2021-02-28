@@ -1,9 +1,9 @@
 /*!
  * elFinder - file manager for web
- * Version 2.1.56 (2020-04-22)
+ * Version 2.1.56 (2021-02-28)
  * http://elfinder.org
  * 
- * Copyright 2009-2020, Studio 42
+ * Copyright 2009-2021, Studio 42
  * Licensed under a 3-clauses BSD license
  */
 (function(root, factory) {
