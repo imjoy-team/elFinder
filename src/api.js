@@ -645,20 +645,21 @@ api.tmb = function(opts, res) {
 		//create.
 		var tasks = [];
 		for(let file of files){
-			if(file.startsWith(config.tmbroot)){
-				tasks.push(Promise.resolve(path.basename(file).split('.png')[0]));
-			}
-			else{
-				tasks.push(Jimp.read(await fs.readFile(file))
-					.then(function(img) {
-						var op = _private.encode(file);
-						img.resize(48, 48).getBase64('image/png', async (err, res) => {
-							const base64Response = await fetch(res);
-							const blob = await base64Response.blob();
-							await writeFile(path.join(config.tmbroot, op + ".png"), blob);
-							return Promise.resolve(op)
-						}) 
-					}));
+			if(!file.startsWith(config.tmbroot)){
+				const img = await Jimp.read(await fs.readFile(file))
+				const op = _private.encode(file);
+				tasks.push(new Promise((resolve, reject)=>{
+					img.resize(48, 48).getBase64('image/png', async (err, res) => {
+						if(err){
+							reject(err)
+							return
+						}
+						const base64Response = await fetch(res);
+						const blob = await base64Response.blob();
+						await writeFile(path.join(config.tmbroot, op + ".png"), blob);
+						resolve(op)
+					}) 
+				}));
 			}
 		}
 		Promise.all(tasks)
