@@ -186,7 +186,7 @@ async function copyFolderRecursive( source, target ) {
     var files = [];
 
     // Check if folder needs to be created or integrated
-    var targetFolder = path.join( target, path.basename( source ) );
+    var targetFolder = target;
     if ( !(await fs.exists( targetFolder )) ) {
         await fs.mkdir( targetFolder );
     }
