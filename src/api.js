@@ -83,26 +83,19 @@ function initBrowserFS() {
 
 
 
-export const api = {mime: mime};
+
 const _private = {};
-const roots = [{
-    url: "/tmp/",       //Required
-    path: "/tmp",   //Required
-    permissions: { read:1, write: 1, lock: 0 }
-},
-{
-    url: "/home/",       //Required
-    path: "/home",   //Required
-    permissions: { read:1, write: 1, lock: 0 }
-}]
+
 
 const config = {
-    roots,
-    volumes: roots.map( (r)=>r.path ),
+    roots: [],
+    volumes: [],
     tmbroot: '/tmp/.tmb',
-	router: '/connector',
 	disabled: ['chmod', 'mkfile', 'zipdl', 'edit', 'put', 'size'],
-	volumeicons: ['elfinder-navbar-root-local', 'elfinder-navbar-root-local']
+	volumeicons: ['elfinder-navbar-root-local', 'elfinder-navbar-root-local'],
+	init(){
+		fs.mkdir( config.tmbroot );
+	}
 }
 
 config.acl = function(path) {
@@ -115,6 +108,7 @@ config.acl = function(path) {
 
 }
 
+export const api = {mime, config};
 
 let fs, path;
 initBrowserFS().then((bfs)=>{
@@ -123,7 +117,6 @@ initBrowserFS().then((bfs)=>{
  path = bfs.path
  api.fs = fs
  api.path = path
- fs.mkdir( config.tmbroot );
 })
 
 function writeFile(path, file) {
@@ -269,11 +262,9 @@ api.duplicate = function(opt) {
 	})
 }
 
-api.file = function(opts, res) {
-	return new Promise(function(resolve, reject) {
-		var target = _private.decode(opts.target);
-		res.sendFile(target.absolutePath);
-	})
+api.file = async function(opts, res) {
+	var target = _private.decode(opts.target);
+	return await res.sendFile(target.absolutePath)
 }
 
 api.get = function(opts, res) {
@@ -383,6 +374,7 @@ api.open = function(opts, res) {
                     _target = _private.encode(config.volumes[0] + path.sep);
                 }
            
+			
 		
 		}
 		if (!_target) {
@@ -653,16 +645,21 @@ api.tmb = function(opts, res) {
 		//create.
 		var tasks = [];
 		for(let file of files){
-			tasks.push(Jimp.read(await fs.readFile(file))
-				.then(function(img) {
-					var op = _private.encode(file);
-					img.resize(48, 48).getBase64('image/png', async (err, res) => {
-						const base64Response = await fetch(res);
-						const blob = await base64Response.blob();
-						await writeFile(path.join(config.tmbroot, op + ".png"), blob);
-						return Promise.resolve(op)
-					}) 
-				}));
+			if(file.startsWith(config.tmbroot)){
+				tasks.push(Promise.resolve(path.basename(file).split('.png')[0]));
+			}
+			else{
+				tasks.push(Jimp.read(await fs.readFile(file))
+					.then(function(img) {
+						var op = _private.encode(file);
+						img.resize(48, 48).getBase64('image/png', async (err, res) => {
+							const base64Response = await fetch(res);
+							const blob = await base64Response.blob();
+							await writeFile(path.join(config.tmbroot, op + ".png"), blob);
+							return Promise.resolve(op)
+						}) 
+					}));
+			}
 		}
 		Promise.all(tasks)
 			.then(function(hashes) {
