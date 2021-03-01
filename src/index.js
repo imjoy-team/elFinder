@@ -54,14 +54,15 @@ const routes = [
 	{path: `${baseURL}${clientId}/local/:route`, type: 'get'}
 ]
 
-api.config.roots = [{
-    url: `${baseURL}${clientId}/local/tmp/`,   //Required
-    path: "/tmp",   //Required
-    permissions: { read:1, write: 1, lock: 0 }
-},
+api.config.roots = [
 {
     url: `${baseURL}${clientId}/local/home/`,       //Required
     path: "/home",   //Required
+    permissions: { read:1, write: 1, lock: 0 }
+},
+{
+    url: `${baseURL}${clientId}/local/tmp/`,   //Required
+    path: "/tmp",   //Required
     permissions: { read:1, write: 1, lock: 0 }
 }]
 
