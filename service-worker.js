@@ -8,15 +8,15 @@ const baseURL = (function() {
 
 importScripts(baseURL + 'js/lib/ServiceWorkerWare.js');
 
-let getVersionPort=null;
+const ports = {};
 const requestPool = {};
 const routeRegistry = {};
 const worker = new ServiceWorkerWare();
 
 self.addEventListener("message", event => {
   if (event.data && event.data.type === 'INIT_PORT') {
-    getVersionPort = event.ports[0];
     const clientId = event.data.clientId;
+    ports[clientId] = event.ports[0];
     routeRegistry[clientId] = {}
    
   }
@@ -39,7 +39,6 @@ self.addEventListener("message", event => {
     }
   }
   else if (event.data && event.data.type === 'RESPONSE') {
-    // getVersionPort.postMessage({ payload: ++count });
     if(event.data.requestId && requestPool[event.data.requestId]){
       const promise = requestPool[event.data.requestId]
       delete requestPool[event.data.requestId]
@@ -50,11 +49,11 @@ self.addEventListener("message", event => {
 
 function makeRequest(clientId, request){
   return new Promise((resolve, reject)=>{
-    if(!getVersionPort) throw new Error("API communication is not initialized.")
+    if(!ports[clientId]) throw new Error("Communication is not initialized for the client")
     const requestId = `${Date.now()}`;
     requestPool[requestId] = {resolve, reject}
     //TODO: implement timeout for requests
-    getVersionPort.postMessage({ type: 'REQUEST', requestId: requestId, request, clientId });
+    ports[clientId].postMessage({ type: 'REQUEST', requestId: requestId, request, clientId });
   })
 }
 
