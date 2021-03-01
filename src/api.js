@@ -328,27 +328,6 @@ api.mkdir = function(opts, res) {
 	})
 }
 
-api.move = function(opts, res) {
-	return new Promise(async function(resolve, reject) {
-		if (await fs.exists(opts.dst)) {
-			return reject('Destination exists');
-		}
-		fs.rename(opts.src, opts.dst, function(err) {
-			if (err) return reject(err);
-			_private.info(opts.dst)
-				.then(function(info) {
-					resolve({
-						added: [info],
-						removed: opts.upload ? [] : [_private.encode(opts.src)]
-					});
-				})
-				.catch(function(err) {
-					reject(err);
-				})
-		})
-	})
-}
-
 api.open = function(opts, res) {
 	return new Promise(async function(resolve, reject) {
         try{
@@ -476,7 +455,7 @@ api.paste = function(opts, res) {
 				name = fil + opts.suffix + ext;
 			}
 			if (opts.cut == 1) {
-				tasks.push(api.move({
+				tasks.push(_private.move({
 					src: info.absolutePath,
 					dst: path.join(dest.absolutePath, name)
 				}));
@@ -515,7 +494,7 @@ api.rename = function(opts, res) {
 	if (!opts.target) return Promise.reject('errCmdParams');
 	var dir = _private.decode(opts.target);
 	var dirname = path.dirname(dir.absolutePath);
-	return api.move({
+	return _private.move({
 		src: dir.absolutePath,
 		dst: path.join(dirname, opts.name)
 	})
@@ -763,6 +742,26 @@ api.zipdl = function(opts, res) {
 }
 
 
+_private.move = function(opts, res) {
+	return new Promise(async function(resolve, reject) {
+		// if (await fs.exists(opts.dst)) {
+		// 	return reject('Destination exists');
+		// }
+		fs.rename(opts.src, opts.dst, function(err) {
+			if (err) return reject(err);
+			_private.info(opts.dst)
+				.then(function(info) {
+					resolve({
+						added: [info],
+						removed: opts.upload ? [] : [_private.encode(opts.src)]
+					});
+				})
+				.catch(function(err) {
+					reject(err);
+				})
+		})
+	})
+}
 
 //_private
 _private.compress = async function(files, dest) {
