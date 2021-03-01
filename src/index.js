@@ -51,16 +51,16 @@ function initializeServiceWorker(){
 
 
 const routes = [
-	{path: '/local/:route', type: 'get'}
+	{path: `${baseURL}${clientId}/local/:route`, type: 'get'}
 ]
 
 api.config.roots = [{
-    url: `/${clientId}/local/tmp/`,   //Required
+    url: `${baseURL}${clientId}/local/tmp/`,   //Required
     path: "/tmp",   //Required
     permissions: { read:1, write: 1, lock: 0 }
 },
 {
-    url: `/${clientId}/local/home/`,       //Required
+    url: `${baseURL}${clientId}/local/home/`,       //Required
     path: "/home",   //Required
     permissions: { read:1, write: 1, lock: 0 }
 }]
