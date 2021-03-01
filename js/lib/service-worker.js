@@ -1,11 +1,18 @@
 /* eslint no-unused-vars: 0 */
 /* global importScripts, ServiceWorkerWare */
-importScripts('./js/lib/ServiceWorkerWare.js');
+const baseURL = (function() {
+  var tokens = (self.location + '').split('/');
+  tokens[tokens.length - 1] = '';
+  return tokens.join('/');
+})();
+
+importScripts(baseURL + 'js/lib/ServiceWorkerWare.js');
 
 let getVersionPort=null;
 const requestPool = {};
 const routeRegistry = {};
 const worker = new ServiceWorkerWare();
+
 self.addEventListener("message", event => {
   if (event.data && event.data.type === 'INIT_PORT') {
     getVersionPort = event.ports[0];
@@ -17,7 +24,7 @@ self.addEventListener("message", event => {
     const routes = event.data.routes || []
     const clientId = event.data.clientId;
     for(let route of routes){
-      worker[route.type]('/'+clientId+route.path, async function(req) {
+      worker[route.type](baseURL+clientId+route.path, async function(req) {
         try{
           const response = await makeRequest(clientId, {route, parameters: req.parameters, body: req.body})
           if(response.error){
