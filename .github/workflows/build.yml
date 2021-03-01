@@ -44,6 +44,8 @@ jobs:
           path: ./elfinder_client
       - name: Deploy assets to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3.5.0
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
         with:
           deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
           publish_dir: ./elfinder_client
