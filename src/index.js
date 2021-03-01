@@ -18,6 +18,7 @@ function guidGenerator() {
     return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
 }
 
+const baseURL = location.pathname;
 const clientId = guidGenerator()
 const CONNECTOR_URL = '/local/connector'
 function initializeServiceWorker(){
@@ -32,7 +33,7 @@ function initializeServiceWorker(){
 					}
 				};
 			};
-			navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+			navigator.serviceWorker.register(baseURL + 'service-worker.js').then(function(registration) {
 				console.log('Service worker successfully registered, scope is:', registration.scope);
 			})
 			.catch(function(error) {
