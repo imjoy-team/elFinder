@@ -219,13 +219,7 @@ window.elFinderSupportBrowserFs = function(upload) {
 	
 	this.init = function(fm) {
 		this.fm = fm;
-		this.fm.options.url = `/${clientId}${CONNECTOR_URL}`;
-		// const openUrl = fm.openUrl.bind(fm);
-		// fm.openUrl = (config)=>{
-		// 	console.log('=======> openUrl', config, openUrl(config))
-		// 	return openUrl(config)
-		// }
-		// fm.uploadURL = CONNECTOR_URL
+		this.fm.options.url = `${baseURL}${clientId}${CONNECTOR_URL}`;
 	};
 
 	console.log(api)
