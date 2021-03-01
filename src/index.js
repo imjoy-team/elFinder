@@ -73,9 +73,9 @@ api.config.tmburl = `${baseURL}${clientId}/tmp/.tmb/`;
 async function handleRequest(request){
 	let path;
 	if(request.route.path === `${baseURL}${clientId}/:route`){
-		const route = '/' + request.parameters.route
+		const route = decodeURIComponent('/' + request.parameters.route)
 		if(route.startsWith('/connector')){
-			let param = decodeURIComponent(route.split('?')[1])
+			let param = route.split('?')[1]
 			param = new URLSearchParams(param)
 			const opts = {}
 			for(let p of Array.from(param.entries())){
