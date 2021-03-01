@@ -91,6 +91,7 @@ const config = {
     roots: [],
     volumes: [],
     tmbroot: '/tmp/.tmb',
+	tmburl: '/tmp/.tmb/',
 	disabled: ['chmod', 'mkfile', 'zipdl', 'edit', 'put', 'size'],
 	volumeicons: ['elfinder-navbar-root-local', 'elfinder-navbar-root-local'],
 	init(){
@@ -340,7 +341,7 @@ api.open = function(opts, res) {
 		data.options = {
             disabled: config.disabled,
 			uiCmdMap: [],
-			tmbUrl: path.join(config.roots[0].url, '.tmb/', )
+			tmbUrl: config.tmburl
 		}
 		var _init = opts.init && opts.init == true;
 		var _target = opts.target;

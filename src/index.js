@@ -20,7 +20,7 @@ function guidGenerator() {
 
 const baseURL = location.pathname;
 const clientId = guidGenerator()
-const CONNECTOR_URL = '/local/connector'
+const CONNECTOR_URL = '/connector'
 function initializeServiceWorker(){
 	if ('serviceWorker' in navigator) {
 		// Register the worker and show the list of quotations.
@@ -51,27 +51,28 @@ function initializeServiceWorker(){
 
 
 const routes = [
-	{path: `${baseURL}${clientId}/local/:route`, type: 'get'}
+	{path: `${baseURL}${clientId}/:route`, type: 'get'}
 ]
 
 api.config.roots = [
 {
-    url: `${baseURL}${clientId}/local/home/`,       //Required
+    url: `${baseURL}${clientId}/home/`,       //Required
     path: "/home",   //Required
     permissions: { read:1, write: 1, lock: 0 }
 },
 {
-    url: `${baseURL}${clientId}/local/tmp/`,   //Required
+    url: `${baseURL}${clientId}/tmp/`,   //Required
     path: "/tmp",   //Required
     permissions: { read:1, write: 1, lock: 0 }
 }]
 
 api.config.volumes = api.config.roots.map( (r)=>r.path );
 api.config.tmbroot = '/tmp/.tmb';
+api.config.tmburl = `${baseURL}${clientId}/tmp/.tmb/`;
 
 async function handleRequest(request){
 	let path;
-	if(request.route.path === '/local/:route'){
+	if(request.route.path === `${baseURL}${clientId}/:route`){
 		const route = '/' + request.parameters.route
 		if(route.startsWith('/connector')){
 			let param = decodeURIComponent(route.split('?')[1])
@@ -159,7 +160,6 @@ function setupCommunication(){
 		if(event.data.type === 'REQUEST' && event.data.clientId ===clientId ){
 			const requestId = event.data.requestId
 			const request = event.data.request
-			console.log('making request: ', clientId, request)
 			handleRequest(request).then((response)=>{
 				navigator.serviceWorker.controller.postMessage({
 					type: 'RESPONSE',
