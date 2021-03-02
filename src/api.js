@@ -305,28 +305,23 @@ api.ls = function(opts, res) {
 }
 
 //TODO check permission.
-api.mkdir = function(opts, res) {
-	return new Promise(function(resolve, reject) {
-		var dir = _private.decode(opts.target);
-		var tasks = [];
-		var dirs = opts.dirs || [];
-		if (opts.name) {
-			dirs.push(opts.name);
+api.mkdir = async function(opts, res) {
+	var dir = _private.decode(opts.target);
+	var dirs = opts.dirs || [];
+	if (opts.name) {
+		dirs.push(opts.name);
+	}
+	const added = []
+	for(let name of dirs){
+		var _dir = path.join(dir.absolutePath, name);
+		if (!(await fs.exists(_dir))) {
+			await fs.mkdir(_dir);
+			added.push(await _private.info(_dir));
 		}
-		each(dirs, async function(name) {
-			var _dir = path.join(dir.absolutePath, name);
-			if (!(await fs.exists(_dir))) {
-				await fs.mkdir(_dir);
-				tasks.push(_private.info(_dir));
-			}
-		})
-		Promise.all(tasks)
-			.then(function(added) {
-				resolve({
-					added: added
-				});
-			})
-	})
+	}
+	return {
+		added: added
+	}
 }
 
 api.open = function(opts, res) {
@@ -547,7 +542,7 @@ api.rm = function(opts, res) {
 			try {
                 var target = _private.decode(hash);
                 if((await fs.lstat(target.absolutePath)).isDirectory())
-                    await fs.rmdir(target.absolutePath, {recursive: true})
+                    await fs.rmdir(target.absolutePath)
                 else
 				    await fs.unlink(target.absolutePath);
 				removed.push(hash);
