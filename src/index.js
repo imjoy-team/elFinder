@@ -177,6 +177,14 @@ function setupCommunication(){
 		clientId,
 		routes
 	});
+
+	window.addEventListener("beforeunload", function (e) {
+		navigator.serviceWorker.controller.postMessage({
+			type: 'DISPOSE_PORT',
+			clientId
+		});
+		return undefined;
+	});
 }
 
 

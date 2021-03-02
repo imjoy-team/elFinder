@@ -18,7 +18,6 @@ self.addEventListener("message", event => {
     const clientId = event.data.clientId;
     ports[clientId] = event.ports[0];
     routeRegistry[clientId] = {}
-   
   }
   else if(event.data && event.data.type === 'REGISTER'){
     const routes = event.data.routes || []
@@ -35,8 +34,14 @@ self.addEventListener("message", event => {
         catch(e){
           console.error(e)
         }
-      });
+      }, clientId);
     }
+  }
+  else if(event.data && event.data.type === 'DISPOSE_PORT'){
+    const clientId = event.data.clientId;
+    delete ports[clientId];
+    delete routeRegistry[clientId];
+    worker.remove(clientId);
   }
   else if (event.data && event.data.type === 'RESPONSE') {
     if(event.data.requestId && requestPool[event.data.requestId]){
