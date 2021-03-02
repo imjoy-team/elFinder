@@ -10,7 +10,7 @@
 var fs   = require('fs'),
 	path = require('path'),
 	util = require('util'),
-	ugjs = require('uglify-js'),
+	ugjs = require('uglify-es'),
 	csso = require('csso');
 
 var dirmode = 0755,

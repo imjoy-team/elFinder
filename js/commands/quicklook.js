@@ -1,3 +1,48 @@
+async function imjoyPreviews(ql, file) {
+	"use strict";
+	const preview = ql.preview
+	const fm = ql.fm;
+	const api = window.imjoy.api
+	const viewers = await api.getServices({type: '#file-preview'})
+	for(let viewer of viewers){
+		try{
+			if (await viewer.check(file)) {
+				const loading = $('<div class="elfinder-quicklook-info-data"><span class="elfinder-spinner-text">'+fm.i18n('nowLoading')+'</span><span class="elfinder-spinner"></span></div>').appendTo(ql.info.find('.elfinder-quicklook-info'));
+				const prog = $('<div class="elfinder-quicklook-info-progress"></div>').appendTo(loading);
+				const hideInfo = function() {
+					loading.remove();
+					// hide info/icon
+					ql.hideinfo();
+				}
+				const img = $('<div id="imjoy-preview-dialog" style="width:100%;height:100%;"></div>')
+					.hide()
+					.appendTo(preview)
+					
+				const opDfd = fm.openUrl(file.hash, false, async function(url) {
+					try{
+						hideInfo();
+						img.fadeIn(100);
+						await viewer.view({url, window_id: 'imjoy-preview-dialog'})
+					}
+					catch(e){
+						img.innerHTML = `Failed to view with ${viewer.name}: ${e}`
+						loading.remove();
+					}
+				}, { progressBar: prog });
+				// stop loading on change file if not loaded yet
+				preview.one('change', function() {
+					opDfd && opDfd.state && opDfd.state() === 'pending' && opDfd.reject();
+				});
+				return true
+			}
+		}
+		catch(e){
+			console.error(`Failed to check with ${viewer.name}`, e)
+		}
+	}
+	return false
+}
+
 /**
  * @class  elFinder command "quicklook"
  * Fast preview for some files types
@@ -776,13 +821,14 @@
 				}
 			});
 			
-			self.change(function() {
+			self.change(async function() {
 				if (self.opened()) {
 					if (self.value) {
 						if (self.value.tmb && self.value.tmb == 1) {
 							// try re-get file object
 							self.value = Object.assign({}, fm.file(self.value.hash));
 						}
+						if(!(await imjoyPreviews(self, self.value)))
 						preview.trigger($.Event(evUpdate, {file : self.value}));
 					}
 				}
@@ -855,10 +901,11 @@
 			}
 		}).bind('change', function(e) {
 			if (e.data && e.data.changed && self.opened()) {
-				$.each(e.data.changed, function() {
+				$.each(e.data.changed, async function() {
 					if (self.window.data('hash') === this.hash) {
 						self.window.data('hash', null);
-						self.preview.trigger(evUpdate);
+						if(!(await imjoyPreviews(self, self.value)))
+							self.preview.trigger(evUpdate);
 						return false;
 					}
 				});
