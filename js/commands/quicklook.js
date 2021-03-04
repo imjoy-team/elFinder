@@ -1,3 +1,9 @@
+/**
+ * @class  elFinder command "quicklook"
+ * Using ImJoy `file-preview` services to preview the files
+ *
+ * @author Wei Ouyang
+ **/
 async function imjoyPreviews(ql, file) {
 	"use strict";
 	const preview = ql.preview

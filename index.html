@@ -8,6 +8,7 @@
 
 		<!-- elfinder 1.x connector API support (OPTIONAL) -->
 		<script src="js/proxy/elFinderSupportBrowserFS.js"></script>
+
 		<!-- Require JS (REQUIRED) -->
 		<!-- Rename "main.default.js" to "main.js" and edit it if you need configure elFInder options or any things -->
 		<script data-main="./main.default.js" src="//cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
@@ -20,6 +21,14 @@
 					url : '/connector', // or connector.maximal.php : connector URL (REQUIRED)
 					height: '100%',
 					transport : new elFinderSupportBrowserFs(),
+					theme: 'default',
+					themes: {
+						'dark-slim': 'https://johnfort.github.io/elFinder.themes/dark-slim/manifest.json',
+						'material': 'https://nao-pon.github.io/elfinder-theme-manifests/material-default.json',
+						'material-gray': 'https://nao-pon.github.io/elfinder-theme-manifests/material-gray.json',
+						'material-light': 'https://nao-pon.github.io/elfinder-theme-manifests/material-light.json',
+						'win10': 'https://nao-pon.github.io/elfinder-theme-manifests/win10.json'
+					},
 					commandsOptions : {
 						edit : {
 							extraOptions : {
@@ -65,13 +74,28 @@
 										type: '#file-preview',
 										name: 'ITK/VTK Viewer',
 										async check(fileObj){
-											if(fileObj.mime.startsWith('image/')){
-												console.log('=====>', fileObj)
+											if(fileObj.mime.startsWith('image/tiff')){
 												return true
 											}
 										},
 										async view({url, window_id}){
-											await api.createWindow({src: 'https://kitware.github.io/itk-vtk-viewer/app/', window_id})
+											console.log('https://kitware.github.io/itk-vtk-viewer/app/?fileToLoad='+url)
+											await api.createWindow({src: 'https://kitware.github.io/itk-vtk-viewer/app/?fileToLoad='+url, window_id})
+										}
+									})
+									await api.registerService({
+										type: '#file-preview',
+										name: 'Kaibu',
+										async check(fileObj){
+											if(fileObj.mime.startsWith('image/tiff')){
+												return true
+											}
+										},
+										async view({url, window_id}){
+											const viewer = await api.createWindow({src: 'https://kaibu.org/', window_id})
+											await viewer.view_image("https://images.proteinatlas.org/30741/845_A6_1_blue_red_green.jpg");
+											await viewer.add_shapes([], {name: 'annotation'})
+											
 										}
 									})
 									window.imjoy = app.imjoy;

@@ -51,7 +51,8 @@ function initializeServiceWorker(){
 
 
 const routes = [
-	{path: `${baseURL}${clientId}/:route`, type: 'get'}
+	{path: `${baseURL}${clientId}/:route`, type: 'get'},
+	{path: `${baseURL}${clientId}/:route`, type: 'post'}
 ]
 
 api.config.roots = [
@@ -70,30 +71,58 @@ api.config.volumes = api.config.roots.map( (r)=>r.path );
 api.config.tmbroot = '/tmp/.tmb';
 api.config.tmburl = `${baseURL}${clientId}/tmp/.tmb/`;
 
+function decodeQuery(param){
+	param = new URLSearchParams(param)
+	const opts = {}
+	for(let p of Array.from(param.entries())){
+		if(opts[p[0]]){
+			if(!Array.isArray(opts[p[0]]))
+				opts[p[0]] = [opts[p[0]], p[1]]
+			else{
+				opts[p[0]].push(p[1])
+			}
+		}
+		else{
+			if(p[0].endsWith('[]'))
+				opts[p[0]] = [p[1]]
+			else
+				opts[p[0]] = p[1]
+		}
+	}
+	return opts
+}
+
+function handleFile({filePath, offset, length}){
+	return new Promise((resolve, reject)=>{
+		api.fs.open(filePath, 'r', function(e, fd) {
+			if(e){
+				reject(e)
+				return
+			}
+			const output = new Uint8Array(length);
+			api.fs.read(fd, output, 0, length, offset, function(e, bytesRead, output) {
+				if(e){
+					reject(e)
+					return
+				}
+				resolve(output)
+			});
+		});
+	})
+}
+
 async function handleRequest(request){
 	let path;
 	if(request.route.path === `${baseURL}${clientId}/:route`){
 		const route = decodeURIComponent('/' + request.parameters.route)
 		if(route.startsWith('/connector')){
-			let param = route.split('?')[1]
-			param = new URLSearchParams(param)
-			const opts = {}
-			for(let p of Array.from(param.entries())){
-				if(opts[p[0]]){
-					if(!Array.isArray(opts[p[0]]))
-						opts[p[0]] = [opts[p[0]], p[1]]
-					else{
-						opts[p[0]].push(p[1])
-					}
-				}
-				else{
-					if(p[0].endsWith('[]'))
-						opts[p[0]] = [p[1]]
-					else
-						opts[p[0]] = p[1]
-				}
+			let opts;
+			if(request.body){
+				opts = decodeQuery(request.body)
 			}
-
+			else{
+				opts = decodeQuery(route.split('?')[1])
+			}
 			// convert `targets[]` to `target`
 			for(let k of Object.keys(opts)){
 				if(k.endsWith('[]')){
@@ -104,16 +133,11 @@ async function handleRequest(request){
 
 			try{
 				if(opts.cmd ==='file'){
-					const content = await api.file(opts, {
-						async sendFile(path){
-							const bytes = await api.fs.readFile(path)
-							const file = new File([bytes.buffer], api.path.basename(path), {
-								type: api.mime.lookup(path) || 'application/octet-stream',
-							});
-							return file
-						}
-					})
-					return {body: content, status: 200}
+					return await api.file(opts)
+				}
+				else if(opts.cmd ==='put'){
+					const response = await api.put(opts)
+					return {body: JSON.stringify(response), status: 200}
 				}
 				else{
 					return {body: JSON.stringify(await api[opts.cmd](opts)), status: 200}
@@ -160,14 +184,26 @@ function setupCommunication(){
 		if(event.data.type === 'REQUEST' && event.data.clientId ===clientId ){
 			const requestId = event.data.requestId
 			const request = event.data.request
-			handleRequest(request).then((response)=>{
-				navigator.serviceWorker.controller.postMessage({
-					type: 'RESPONSE',
-					clientId,
-					requestId,
-					response
-				});
-			})
+			if(request.filePath){
+				handleFile(request).then((response)=>{
+					navigator.serviceWorker.controller.postMessage({
+						type: 'RESPONSE',
+						clientId,
+						requestId,
+						response
+					});
+				})
+			}
+			else{
+				handleRequest(request).then((response)=>{
+					navigator.serviceWorker.controller.postMessage({
+						type: 'RESPONSE',
+						clientId,
+						requestId,
+						response
+					});
+				})
+			}
 			
 		}
 	};
@@ -196,11 +232,14 @@ window.elFinderSupportBrowserFs = function(upload) {
 		const self = this.fm;
 		const dfrd = $.Deferred();
 		const files       = data.input ? data.input.files : data.files.files;
+		data.progress = (progress)=>{
+			self.notify({type : 'upload', cnt : 0, progress, size : 0});
+		}
 		api.upload(data, null, files).then((data)=>{
 			self.uploads.xhrUploading = false;
 			if (data) {
 				self.currentReqCmd = 'upload';
-				data.warning && triggerError(data.warning);
+				data.warning && console.warn(data.warning);
 				self.updateCache(data);
 				data.removed && data.removed.length && self.remove(data);
 				data.added   && data.added.length   && self.add(data);
