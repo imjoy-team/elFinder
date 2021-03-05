@@ -701,7 +701,6 @@ async function saveImage(img, path){
 }
 
 async function generateThumbnail(file){
-	console.log('====thumbnail:', file)
 	const img = await Jimp.read(await fs.readFile(file))
 	const op = _private.encode(file);
 	await saveImage(img.resize(48, 48), path.join(config.tmbroot, op + ".png"))

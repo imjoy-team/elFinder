@@ -182,7 +182,8 @@
 .elfinder-tree .elfinder-navbar-root-onedrive .elfinder-navbar-icon,
 .elfinder-tree .elfinder-navbar-root-box .elfinder-navbar-icon,
 .elfinder-tree .elfinder-navbar-root-zip .elfinder-navbar-icon,
-.elfinder-tree .elfinder-navbar-root-network .elfinder-navbar-icon {
+.elfinder-tree .elfinder-navbar-root-network .elfinder-navbar-icon,
+.elfinder-tree .elfinder-navbar-root-imjoyplugins .elfinder-navbar-icon {
     background-position: 0 0;
     background-size: contain;
 }
@@ -236,6 +237,11 @@
 .elfinder-tree .elfinder-navbar-root-network .elfinder-navbar-icon {
     background-image: url("../img/volume_icon_network.svg");
     background-image: url("../img/volume_icon_network.png") \9;
+}
+
+.elfinder-tree .elfinder-navbar-root-imjoy .elfinder-navbar-icon {
+    background-image: url("https://imjoy.io/static/img/imjoy-icon.svg");
+    background-image: url("https://imjoy.io/static/img/imjoy-icon.png") \9;
 }
 
 /* icon in active/hove/dropactive state */

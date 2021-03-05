@@ -1,18 +1,19 @@
 /**
  * @class  elFinder command "quicklook"
- * Using ImJoy `file-preview` services to preview the files
+ * Using ImJoy `file-loader` services to preview the files
  *
  * @author Wei Ouyang
  **/
 async function imjoyPreviews(ql, file) {
 	"use strict";
+	if(!window.imjoy) return false;
 	const preview = ql.preview
 	const fm = ql.fm;
 	const api = window.imjoy.api
-	const viewers = await api.getServices({type: '#file-preview'})
-	for(let viewer of viewers){
+	const loaders = await api.getServices({type: '#file-loader'})
+	for(let loader of loaders){
 		try{
-			if (await viewer.check(file)) {
+			if (await loader.check(file)) {
 				const loading = $('<div class="elfinder-quicklook-info-data"><span class="elfinder-spinner-text">'+fm.i18n('nowLoading')+'</span><span class="elfinder-spinner"></span></div>').appendTo(ql.info.find('.elfinder-quicklook-info'));
 				const prog = $('<div class="elfinder-quicklook-info-progress"></div>').appendTo(loading);
 				const hideInfo = function() {
@@ -26,12 +27,12 @@ async function imjoyPreviews(ql, file) {
 					
 				const opDfd = fm.openUrl(file.hash, false, async function(url) {
 					try{
-						hideInfo();
 						img.fadeIn(100);
-						await viewer.view({url, window_id: 'imjoy-preview-dialog'})
+						hideInfo();
+						await loader.load({url, window_id: 'imjoy-preview-dialog'})
 					}
 					catch(e){
-						img.innerHTML = `Failed to view with ${viewer.name}: ${e}`
+						img.innerHTML = `Failed to view with ${loader.name}: ${e}`
 						loading.remove();
 					}
 				}, { progressBar: prog });
@@ -43,7 +44,7 @@ async function imjoyPreviews(ql, file) {
 			}
 		}
 		catch(e){
-			console.error(`Failed to check with ${viewer.name}`, e)
+			console.error(`Failed to check with ${loader.name}`, e)
 		}
 	}
 	return false

@@ -353,6 +353,11 @@
     background-position: 0 -1008px;
 }
 
+.elfinder-button-icon-imjoyplugins {
+    background: url(http://imjoy.io/static/img/imjoy-icon.svg) no-repeat;
+    background-size: 17px;
+}
+
 /* button icon mirroring for rtl */
 .elfinder-rtl .elfinder-button-icon-back,
 .elfinder-rtl .elfinder-button-icon-forward,

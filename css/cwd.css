@@ -524,6 +524,20 @@
     background-position: 1px -1px;
 }
 
+
+.elfinder-navbar-root-imjoyplugins .elfinder-cwd-icon,
+.elfinder-cwd .elfinder-navbar-root-imjoyplugins.elfinder-droppable-active .elfinder-cwd-icon,
+.elfinder-cwd-view-list .elfinder-navbar-root-imjoyplugins td .elfinder-cwd-icon {
+    background-image: url("https://imjoy.io/static/img/imjoy-icon.svg");
+    background-image: url("https://imjoy.io/static/img/imjoy-icon.png") \9;
+    background-position: 0 0;
+    background-size: contain;
+}
+
+.elfinder-cwd .elfinder-navbar-root-imjoyplugins.elfinder-droppable-active .elfinder-cwd-icon {
+    background-position: 1px -1px;
+}
+
 /* type badge in "icons" view */
 .elfinder-cwd-icon:before {
     content: none;

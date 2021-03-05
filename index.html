@@ -41,6 +41,8 @@
 							}
 						},
 						quicklook : {
+							width: 750,
+							height: 450,
 							// to enable CAD-Files and 3D-Models preview with sharecad.org
 							sharecadMimes : ['image/vnd.dwg', 'image/vnd.dxf', 'model/vnd.dwf', 'application/vnd.hp-hpgl', 'application/plt', 'application/step', 'model/iges', 'application/vnd.ms-pki.stl', 'application/sat', 'image/cgm', 'application/x-msmetafile'],
 							// to enable preview with Google Docs Viewer
@@ -70,32 +72,63 @@
 									imjoy_api: { } // override some imjoy API functions here
 								}).then(async app => {
 									const api = app.imjoy.api
+									function urlToBase64(url){
+										return new Promise(async (resolve, reject)=>{
+											const response = await fetch(url)
+											const blob = await response.blob()
+											const reader = new FileReader() ;
+											reader.onload = function(){ resolve(this.result) } ;
+											reader.onerror = reject
+											reader.readAsDataURL(blob) ;
+										})
+									}
 									await api.registerService({
-										type: '#file-preview',
+										type: '#file-loader',
 										name: 'ITK/VTK Viewer',
 										async check(fileObj){
 											if(fileObj.mime.startsWith('image/tiff')){
 												return true
 											}
 										},
-										async view({url, window_id}){
+										async load({url, window_id}){
 											console.log('https://kitware.github.io/itk-vtk-viewer/app/?fileToLoad='+url)
 											await api.createWindow({src: 'https://kitware.github.io/itk-vtk-viewer/app/?fileToLoad='+url, window_id})
 										}
 									})
 									await api.registerService({
-										type: '#file-preview',
+										type: '#file-loader',
 										name: 'Kaibu',
+										icon: 'https://kaibu.org/static/img/kaibu-icon.svg',
 										async check(fileObj){
-											if(fileObj.mime.startsWith('image/tiff')){
+											if(fileObj.mime.startsWith('image/') || fileObj.mime === 'directory'){
 												return true
 											}
 										},
-										async view({url, window_id}){
-											const viewer = await api.createWindow({src: 'https://kaibu.org/', window_id})
-											await viewer.view_image("https://images.proteinatlas.org/30741/845_A6_1_blue_red_green.jpg");
-											await viewer.add_shapes([], {name: 'annotation'})
-											
+										async load({source, type, window_id}){
+											if(type === 'file'){
+												const base64 = await urlToBase64(source.url)
+												const viewer = await api.createWindow({src: 'https://kaibu.org/', window_id})
+												await viewer.view_image(base64, {name: source.name});
+												await viewer.add_shapes([], {name: 'annotation'})
+											}
+											else if(type === 'directory'){
+												const viewer = await api.createWindow({src: 'https://kaibu.org/', window_id})
+												source = source.filter(file => file.mime.startsWith('image/'))
+												const nodes = source.map(file => {return {"title": file.name, "data": file, "isLeaf": true}})
+												await viewer.add_widget({
+													"_rintf": true,
+													"type": "tree",
+													"name": "Samples",
+													"node_dbclick_callback": async (node)=>{
+														await viewer.clear_layers()
+														const file = node.data
+														const base64 = await urlToBase64(file.url)
+														await viewer.view_image(base64, {name: file.name})
+													},
+													"nodes": nodes,
+												})
+											}
+
 										}
 									})
 									window.imjoy = app.imjoy;
