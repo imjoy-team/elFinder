@@ -28907,7 +28907,8 @@ async function imjoyPreviews(ql, file) {
 					try{
 						img.fadeIn(100);
 						hideInfo();
-						await loader.load({url, window_id: 'imjoy-preview-dialog'})
+						file.url = url;
+						await loader.load({source: file, type: 'file', window_id: 'imjoy-preview-dialog'})
 					}
 					catch(e){
 						img.innerHTML = `Failed to view with ${loader.name}: ${e}`
