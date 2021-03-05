@@ -56,7 +56,9 @@
 					bootCallback : function(fm, extraObj) {
 						/* any bind functions etc. */
 						fm.bind('init', function() {
-							require(['imjoyLoader'], function (imjoyLoader) { 
+							require(['imjoyLoader'], function (imjoyLoader) {
+								const mainContainer = document.createElement('div');
+								document.getElementById('elfinder').appendChild(mainContainer)
 								// we need a hack here for some umd modules in the imjoy loader to load
 								const _define = window.define;
 								window.define = undefined
@@ -68,7 +70,7 @@
 									show_empty_window: true,
 									menu_style: { position: "absolute", right: 0, top: "2px" },
 									window_style: {width: '100%', height: '100%'},
-									main_container: null,
+									main_container: mainContainer,
 									imjoy_api: { } // override some imjoy API functions here
 								}).then(async app => {
 									const api = app.imjoy.api
@@ -159,6 +161,12 @@
 				}
 			});
 		</script>
+		<style>
+			.imjoy-dialog-control {
+				height: 20px!important;
+				width: 13px!important;
+			}
+		</style>
 	</head>
 	<body>
 
