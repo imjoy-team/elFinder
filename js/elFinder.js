@@ -899,7 +899,6 @@ var elFinder = function(elm, opts, bootCallback) {
 	 **/
 	//this.options = $.extend(true, {}, this._options, opts);
 	this.options = Object.assign({}, this._options);
-	
 	// for old type configuration
 	if (opts.uiOptions) {
 		if (opts.uiOptions.toolbar && Array.isArray(opts.uiOptions.toolbar)) {
@@ -6061,7 +6060,7 @@ elFinder.prototype = {
 	 * 
 	 * @type String
 	 */
-	cmdsToAdd : 'archive duplicate extract mkdir mkfile paste rm upload',
+	cmdsToAdd : 'archive duplicate extract mkdir mkfile paste rm upload imjoyplugins',
 	
 	parseUploadData : function(text) {
 		var self = this,

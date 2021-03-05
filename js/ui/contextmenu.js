@@ -368,7 +368,7 @@ $.fn.elfindercontextmenu = function(fm) {
 					 + fm.i18n('selectedItems', ''+selcnt)
 					 + '</span></div>');
 				}
-				
+
 				nodes = $();
 				$.each(types[type]||[], function(i, name) {
 					var cmd, cmdName, useMap, node, submenu, hover;
@@ -620,7 +620,7 @@ $.fn.elfindercontextmenu = function(fm) {
 		fm.one('load', function() {
 			base = fm.getUI();
 			cwd = fm.getUI('cwd');
-			fm.bind('contextmenu', function(e) {
+			fm.bind('contextmenu', async function(e) {
 				var data = e.data,
 					css = {},
 					prevNode;
@@ -631,9 +631,15 @@ $.fn.elfindercontextmenu = function(fm) {
 				close();
 
 				if (data.type && data.targets) {
-					fm.trigger('contextmenucreate', data);
+					// passing a `done` callback for making sure ImJoy loaders are checked
+					await new Promise((resolve)=>{
+						data.done = resolve
+						fm.trigger('contextmenucreate', data);
+					})
+					delete data.done
 					create(data.type, data.targets);
 					fm.trigger('contextmenucreatedone', data);
+					
 				} else if (data.raw) {
 					createFromRaw(data.raw);
 				}

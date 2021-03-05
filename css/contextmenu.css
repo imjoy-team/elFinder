@@ -124,6 +124,11 @@
     background-size: contain;
 }
 
+.elfinder-navbar-root-imjoyplugins.elfinder-contextmenu-icon {
+    background-image: url("https://imjoy.io/static/img/imjoy-icon.svg")!important;
+    background-size: contain;
+}
+
 /* text in item */
 .elfinder .elfinder-contextmenu .elfinder-contextmenu-item span {
     display: block;

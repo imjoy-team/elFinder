@@ -10,7 +10,7 @@
 var fs   = require('fs'),
 	path = require('path'),
 	util = require('util'),
-	ugjs = require('uglify-js'),
+	ugjs = require('uglify-es'),
 	csso = require('csso');
 
 var dirmode = 0755,
@@ -88,6 +88,7 @@ var dirmode = 0755,
 				path.join(src, 'README.md'),
 				path.join(src, 'composer.json'),
 				path.join(src, 'elfinder.html'),
+				path.join(src, 'index.html'),
 				path.join(src, 'elfinder.legacy.html'),
 				path.join(src, 'main.default.js')
 			]
@@ -237,7 +238,6 @@ task('prebuild', function(){
 desc('build elFinder');
 task({'elfinder': ['clean', 'prebuild', 'css/elfinder.min.css', 'js/elfinder.min.js', 'misc', 'js/extras', 'js/worker']}, function(){
 	copyFile('./js/lib/service-worker.js', './service-worker.js');
-	copyFile('./elfinder.html', './index.html');
 	console.log('elFinder build done');
 });
 
