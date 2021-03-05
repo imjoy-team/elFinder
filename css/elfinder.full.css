@@ -1,6 +1,6 @@
 /*!
  * elFinder - file manager for web
- * Version 2.1.56 (2021-03-01)
+ * Version 2.1.56 (2021-03-05)
  * http://elfinder.org
  * 
  * Copyright 2009-2021, Studio 42
@@ -1350,6 +1350,11 @@ div.elfinder {
     background-size: contain;
 }
 
+.elfinder-navbar-root-imjoyplugins.elfinder-contextmenu-icon {
+    background-image: url("https://imjoy.io/static/img/imjoy-icon.svg")!important;
+    background-size: contain;
+}
+
 /* text in item */
 .elfinder .elfinder-contextmenu .elfinder-contextmenu-item span {
     display: block;
@@ -1987,6 +1992,20 @@ div.elfinder {
 }
 
 .elfinder-cwd .elfinder-navbar-root-network.elfinder-droppable-active .elfinder-cwd-icon {
+    background-position: 1px -1px;
+}
+
+
+.elfinder-navbar-root-imjoyplugins .elfinder-cwd-icon,
+.elfinder-cwd .elfinder-navbar-root-imjoyplugins.elfinder-droppable-active .elfinder-cwd-icon,
+.elfinder-cwd-view-list .elfinder-navbar-root-imjoyplugins td .elfinder-cwd-icon {
+    background-image: url("https://imjoy.io/static/img/imjoy-icon.svg");
+    background-image: url("https://imjoy.io/static/img/imjoy-icon.png") \9;
+    background-position: 0 0;
+    background-size: contain;
+}
+
+.elfinder-cwd .elfinder-navbar-root-imjoyplugins.elfinder-droppable-active .elfinder-cwd-icon {
     background-position: 1px -1px;
 }
 
@@ -3709,7 +3728,8 @@ button.elfinder-info-button {
 .elfinder-tree .elfinder-navbar-root-onedrive .elfinder-navbar-icon,
 .elfinder-tree .elfinder-navbar-root-box .elfinder-navbar-icon,
 .elfinder-tree .elfinder-navbar-root-zip .elfinder-navbar-icon,
-.elfinder-tree .elfinder-navbar-root-network .elfinder-navbar-icon {
+.elfinder-tree .elfinder-navbar-root-network .elfinder-navbar-icon,
+.elfinder-tree .elfinder-navbar-root-imjoyplugins .elfinder-navbar-icon {
     background-position: 0 0;
     background-size: contain;
 }
@@ -3763,6 +3783,11 @@ button.elfinder-info-button {
 .elfinder-tree .elfinder-navbar-root-network .elfinder-navbar-icon {
     background-image: url("../img/volume_icon_network.svg");
     background-image: url("../img/volume_icon_network.png") \9;
+}
+
+.elfinder-tree .elfinder-navbar-root-imjoy .elfinder-navbar-icon {
+    background-image: url("https://imjoy.io/static/img/imjoy-icon.svg");
+    background-image: url("https://imjoy.io/static/img/imjoy-icon.png") \9;
 }
 
 /* icon in active/hove/dropactive state */
@@ -5092,6 +5117,11 @@ embed.elfinder-quicklook-preview-audio {
 
 .elfinder-button-icon-text {
     background-position: 0 -1008px;
+}
+
+.elfinder-button-icon-imjoyplugins {
+    background: url(http://imjoy.io/static/img/imjoy-icon.svg) no-repeat;
+    background-size: 17px;
 }
 
 /* button icon mirroring for rtl */

@@ -1,6 +1,6 @@
 /*!
  * elFinder - file manager for web
- * Version 2.1.56 (2021-03-01)
+ * Version 2.1.56 (2021-03-05)
  * http://elfinder.org
  * 
  * Copyright 2009-2021, Studio 42
@@ -930,7 +930,6 @@ var elFinder = function(elm, opts, bootCallback) {
 	 **/
 	//this.options = $.extend(true, {}, this._options, opts);
 	this.options = Object.assign({}, this._options);
-	
 	// for old type configuration
 	if (opts.uiOptions) {
 		if (opts.uiOptions.toolbar && Array.isArray(opts.uiOptions.toolbar)) {
@@ -6092,7 +6091,7 @@ elFinder.prototype = {
 	 * 
 	 * @type String
 	 */
-	cmdsToAdd : 'archive duplicate extract mkdir mkfile paste rm upload',
+	cmdsToAdd : 'archive duplicate extract mkdir mkfile paste rm upload imjoyplugins',
 	
 	parseUploadData : function(text) {
 		var self = this,
@@ -12513,11 +12512,11 @@ elFinder.prototype._options = {
 	 */
 	contextmenu : {
 		// navbarfolder menu
-		navbar : ['open', 'opennew', 'download', '|', 'upload', 'mkdir', '|', 'copy', 'cut', 'paste', 'duplicate', '|', 'rm', 'empty', 'hide', '|', 'rename', '|', 'archive', '|', 'places', 'info', 'chmod', 'netunmount'],
+		navbar : ['open', 'opennew', 'download', '|', 'imjoyplugins', '|', 'upload', 'mkdir', '|', 'copy', 'cut', 'paste', 'duplicate', '|', 'rm', 'empty', 'hide', '|', 'rename', '|', 'archive', '|', 'places', 'info', 'chmod', 'netunmount'],
 		// current directory menu
-		cwd    : ['undo', 'redo', '|', 'back', 'up', 'reload', '|', 'upload', 'mkdir', 'mkfile', 'paste', '|', 'empty', 'hide', '|', 'view', 'sort', 'selectall', 'colwidth', '|', 'places', 'info', 'chmod', 'netunmount', '|', 'fullscreen', '|', 'preference'],
+		cwd    : ['undo', 'redo', '|', 'imjoyplugins', '|', 'back', 'up', 'reload', '|', 'upload', 'mkdir', 'mkfile', 'paste', '|', 'empty', 'hide', '|', 'view', 'sort', 'selectall', 'colwidth', '|', 'places', 'info', 'chmod', 'netunmount', '|', 'fullscreen', '|', 'preference'],
 		// current directory file menu
-		files  : ['getfile', '|' ,'open', 'opennew', 'download', 'opendir', 'quicklook', '|', 'upload', 'mkdir', '|', 'copy', 'cut', 'paste', 'duplicate', '|', 'rm', 'empty', 'hide', '|', 'rename', 'edit', 'resize', '|', 'archive', 'extract', '|', 'selectall', 'selectinvert', '|', 'places', 'info', 'chmod', 'netunmount']
+		files  : ['getfile', '|', 'imjoyplugins', '|' ,'open', 'opennew', 'download', 'opendir', 'quicklook', '|', 'upload', 'mkdir', '|', 'copy', 'cut', 'paste', 'duplicate', '|', 'rm', 'empty', 'hide', '|', 'rename', 'edit', 'resize', '|', 'archive', 'extract', '|', 'selectall', 'selectinvert', '|', 'places', 'info', 'chmod', 'netunmount']
 	},
 
 	/**
@@ -13842,6 +13841,7 @@ if (typeof elFinder === 'function' && elFinder.prototype.i18) {
 			'cmdselectinvert': 'Invert selection', // from v2.1.28 added 15.08.2017
 			'cmdopennew'   : 'Open in new window', // from v2.1.38 added 3.4.2018
 			'cmdhide'      : 'Hide (Preference)', // from v2.1.41 added 24.7.2018
+			'cmdimjoyplugins': 'ImJoy Plugins',
 
 			/*********************************** buttons ***********************************/
 			'btnClose'  : 'Close',
@@ -14770,7 +14770,7 @@ $.fn.elfindercontextmenu = function(fm) {
 					 + fm.i18n('selectedItems', ''+selcnt)
 					 + '</span></div>');
 				}
-				
+
 				nodes = $();
 				$.each(types[type]||[], function(i, name) {
 					var cmd, cmdName, useMap, node, submenu, hover;
@@ -15022,7 +15022,7 @@ $.fn.elfindercontextmenu = function(fm) {
 		fm.one('load', function() {
 			base = fm.getUI();
 			cwd = fm.getUI('cwd');
-			fm.bind('contextmenu', function(e) {
+			fm.bind('contextmenu', async function(e) {
 				var data = e.data,
 					css = {},
 					prevNode;
@@ -15033,9 +15033,15 @@ $.fn.elfindercontextmenu = function(fm) {
 				close();
 
 				if (data.type && data.targets) {
-					fm.trigger('contextmenucreate', data);
+					// passing a `done` callback for making sure ImJoy loaders are checked
+					await new Promise((resolve)=>{
+						data.done = resolve
+						fm.trigger('contextmenucreate', data);
+					})
+					delete data.done
 					create(data.type, data.targets);
 					fm.trigger('contextmenucreatedone', data);
+					
 				} else if (data.raw) {
 					createFromRaw(data.raw);
 				}
@@ -26420,6 +26426,113 @@ elFinder.prototype.commands.hide = function() {
 
 
 /*
+ * File: /js/commands/imjoyplugins.js
+ */
+
+/**
+ * @class  elFinder command "mkfile"
+ * Create new empty file
+ *
+ * @author Dmitry (dio) Levashov
+ **/
+elFinder.prototype.commands.imjoyplugins = function() {
+		var self = this;
+
+	this.disableOnSearch = true;
+	this.updateOnSelect  = false;
+	this.mime            = 'text/plain';
+	this.prefix          = 'untitled file.txt';
+	this.variants        = [];
+
+	this.getTypeName = function(mime, type) {
+		var fm = self.fm,
+			name;
+		if (name = fm.messages['kind' + fm.kinds[mime]]) {
+			name = fm.i18n(['extentiontype', type.toUpperCase(), name]);
+		} else {
+			name = fm.i18n(['extentionfile', type.toUpperCase()]);
+		}
+		return name;
+	};
+
+	this.fm.bind('contextmenucreate', async function(e) {
+		if (e.data.targets && self.enabled()) {
+			self.variants = [];
+			try{
+				if(!window.imjoy) return false;
+				const api = window.imjoy.api
+				const loaders = await api.getServices({type: '#file-loader'})
+				for(let target of e.data.targets){
+					const file = self.fm.file(target);
+					for(let loader of loaders){
+						if(await loader.check(file)){
+							self.variants.push([{loader, file}, loader.name, loader.icon])
+						}
+					}
+				}
+			}
+			catch(e){
+				console.error(e)
+			}
+			finally{
+				if(e.data.done) e.data.done();
+			}
+		}
+		else{
+			self.variants = [];
+			// we need to mark it done here to allow the contextmenu to be created
+			if(e.data.done) e.data.done();
+		}
+	})
+
+	this.getstate = function() {
+		return 0;
+	};
+
+	function getFileUrl(file){
+		return new Promise((resolve)=>{
+			self.fm.openUrl(file.hash, false, (url)=>{
+				resolve(url)
+			})
+		})
+	}
+
+	this.exec = async function(_dum, {loader, file}) {
+		const fm = self.fm;
+		const dfd = $.Deferred();
+		if(file.mime === 'directory'){
+			const children = self.fm.files(file.hash);
+			const urls = []
+			for(let file of Object.values(children)){
+				file.url = await getFileUrl(file);
+				urls.push(file)
+			}
+			try{
+				await loader.load({source: urls, type: 'directory'})
+				dfd.resolve();
+			}
+			catch(e){
+				dfd.reject(e);
+			}
+		}
+		else{
+			const url = await getFileUrl(file)
+			try{
+				file.url = url;
+				await loader.load({source: file, type: 'file'})
+				dfd.resolve();
+			}
+			catch(e){
+				dfd.reject(e);
+			}
+		}
+		
+		return dfd
+	};
+};
+
+
+/*
  * File: /js/commands/info.js
  */
 
@@ -28766,6 +28879,57 @@ elFinder.prototype.commands.preference = function() {
 
 /**
  * @class  elFinder command "quicklook"
+ * Using ImJoy `file-loader` services to preview the files
+ *
+ * @author Wei Ouyang
+ **/
+async function imjoyPreviews(ql, file) {
+		if(!window.imjoy) return false;
+	const preview = ql.preview
+	const fm = ql.fm;
+	const api = window.imjoy.api
+	const loaders = await api.getServices({type: '#file-loader'})
+	for(let loader of loaders){
+		try{
+			if (await loader.check(file)) {
+				const loading = $('<div class="elfinder-quicklook-info-data"><span class="elfinder-spinner-text">'+fm.i18n('nowLoading')+'</span><span class="elfinder-spinner"></span></div>').appendTo(ql.info.find('.elfinder-quicklook-info'));
+				const prog = $('<div class="elfinder-quicklook-info-progress"></div>').appendTo(loading);
+				const hideInfo = function() {
+					loading.remove();
+					// hide info/icon
+					ql.hideinfo();
+				}
+				const img = $('<div id="imjoy-preview-dialog" style="width:100%;height:100%;"></div>')
+					.hide()
+					.appendTo(preview)
+					
+				const opDfd = fm.openUrl(file.hash, false, async function(url) {
+					try{
+						img.fadeIn(100);
+						hideInfo();
+						await loader.load({url, window_id: 'imjoy-preview-dialog'})
+					}
+					catch(e){
+						img.innerHTML = `Failed to view with ${loader.name}: ${e}`
+						loading.remove();
+					}
+				}, { progressBar: prog });
+				// stop loading on change file if not loaded yet
+				preview.one('change', function() {
+					opDfd && opDfd.state && opDfd.state() === 'pending' && opDfd.reject();
+				});
+				return true
+			}
+		}
+		catch(e){
+			console.error(`Failed to check with ${loader.name}`, e)
+		}
+	}
+	return false
+}
+
+/**
+ * @class  elFinder command "quicklook"
  * Fast preview for some files types
  *
  * @author Dmitry (dio) Levashov
@@ -29541,13 +29705,14 @@ elFinder.prototype.commands.preference = function() {
 				}
 			});
 			
-			self.change(function() {
+			self.change(async function() {
 				if (self.opened()) {
 					if (self.value) {
 						if (self.value.tmb && self.value.tmb == 1) {
 							// try re-get file object
 							self.value = Object.assign({}, fm.file(self.value.hash));
 						}
+						if(!(await imjoyPreviews(self, self.value)))
 						preview.trigger($.Event(evUpdate, {file : self.value}));
 					}
 				}
@@ -29620,10 +29785,11 @@ elFinder.prototype.commands.preference = function() {
 			}
 		}).bind('change', function(e) {
 			if (e.data && e.data.changed && self.opened()) {
-				$.each(e.data.changed, function() {
+				$.each(e.data.changed, async function() {
 					if (self.window.data('hash') === this.hash) {
 						self.window.data('hash', null);
-						self.preview.trigger(evUpdate);
+						if(!(await imjoyPreviews(self, self.value)))
+							self.preview.trigger(evUpdate);
 						return false;
 					}
 				});
@@ -31281,7 +31447,8 @@ elFinder.prototype.commands.quicklook.plugins = [
 	 * @param elFinder.commands.quicklook
 	 **/
 	function(ql) {
-				var fm      = ql.fm,
+		"use strict";
+		var fm      = ql.fm,
 			mimes   = Object.assign(fm.arrayFlip(ql.options.googleDocsMimes || [], 'g'), fm.arrayFlip(ql.options.officeOnlineMimes || [], 'm')),
 			preview = ql.preview,
 			win     = ql.window,

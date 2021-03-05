@@ -24,7 +24,7 @@ Router.prototype.methods = ['get', 'post', 'put', 'delete', 'head',
  * @param path (Regexp) string or regexp to match urls
  * @param handler (Function) payload to be executed if url matches.
  */
-Router.prototype.add = function r_add(method, path, handler) {
+Router.prototype.add = function r_add(method, path, handler, label) {
   var pathRegexAndTags, pathRegex, namedPlaceholders;
 
   method = this._sanitizeMethod(method);
@@ -35,6 +35,7 @@ Router.prototype.add = function r_add(method, path, handler) {
   namedPlaceholders = pathRegexAndTags.tags;
 
   this.stack.push({
+    label,
     method: method,
     path: pathRegex,
     namedPlaceholders: namedPlaceholders,
@@ -46,21 +47,21 @@ Router.prototype.add = function r_add(method, path, handler) {
  * Create the utility methods .get .post ... etc.
  */
 Router.prototype.methods.forEach(function(method) {
-  Router.prototype[method] = function(path, handler) {
-    return this.add(method, path, handler);
+  Router.prototype[method] = function(path, handler, label) {
+    return this.add(method, path, handler, label);
   };
 });
 
 Router.prototype.proxyMethods = function r_proxyPrototype(obj) {
   var self = this;
   this.methods.forEach(function(method) {
-    obj[method] = function(path, mw) {
+    obj[method] = function(path, mw, label) {
       if (typeof mw.onFetch !== 'function' && typeof mw !== 'function') {
         throw new Error('This middleware cannot handle fetch request');
       }
       var handler = typeof mw.onFetch !== 'undefined' ?
         mw.onFetch.bind(mw) : mw;
-      self.add(method, path, handler);
+      self.add(method, path, handler, label);
     };
   });
 };
@@ -123,6 +124,19 @@ Router.prototype._sanitizeMethod = function(method) {
   }
   return sanitizedMethod;
 };
+
+
+/**
+ * Matches the given url and methods with the routes stored in
+ * the stack.
+ */
+Router.prototype.remove = function r_match(tag) {
+  for(let i=0; i< this.stack.length; i++){
+    if(tag && this.stack[i].tag === tag)
+      this.stack.splice(i, 1)
+  }
+};
+
 
 /**
  * Simple path-to-regex translation based on the Express "string-based path"
@@ -699,6 +713,9 @@ ServiceWorkerWare.decorators = {
   }
 };
 
+ServiceWorkerWare.prototype.remove = function sww_remove(label) {
+  return this.router.remove(label)
+};
 
 module.exports = {
   ServiceWorkerWare: ServiceWorkerWare,

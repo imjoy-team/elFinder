@@ -47,7 +47,7 @@
 		start = function(elFinder, editors, config) {
 			// load jQueryUI CSS
 			elFinder.prototype.loadCss('//cdnjs.cloudflare.com/ajax/libs/jqueryui/'+uiver+'/themes/smoothness/jquery-ui.css');
-			
+
 			$(function() {
 				var optEditors = {
 						commandsOptions: {
@@ -104,7 +104,7 @@
 			require(
 				[
 					'elfinder'
-					, 'extras/editors.default.min'               // load text, image editors
+					, 'editors'               // load text, image editors
 					, 'elFinderConfig'
 				//	, 'extras/quicklook.googledocs.min'          // optional preview for GoogleApps contents on the GoogleDrive volume
 				],
@@ -127,6 +127,8 @@
 			'jquery'   : '//cdnjs.cloudflare.com/ajax/libs/jquery/'+(old? '1.12.4' : jqver)+'/jquery.min',
 			'jquery-ui': '//cdnjs.cloudflare.com/ajax/libs/jqueryui/'+uiver+'/jquery-ui.min',
 			'elfinder' : 'elfinder.full',
+			'editors': 'extras/editors.default',
+			'imjoyLoader': 'https://lib.imjoy.io/imjoy-loader',
 			'encoding-japanese': '//cdn.rawgit.com/polygonplanet/encoding.js/1.0.26/encoding.min'
 		},
 		waitSeconds : 10 // optional
