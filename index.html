@@ -118,7 +118,7 @@
 												await viewer.add_widget({
 													"_rintf": true,
 													"type": "tree",
-													"name": "Samples",
+													"name": "Files",
 													"node_dbclick_callback": async (node)=>{
 														await viewer.clear_layers()
 														const file = node.data
@@ -127,6 +127,7 @@
 													},
 													"nodes": nodes,
 												})
+												await viewer.add_shapes([], {name: 'annotation'})
 											}
 
 										}
