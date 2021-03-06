@@ -410,15 +410,18 @@ api.mkdir = async function(opts, res) {
 		dirs.push(opts.name);
 	}
 	const added = []
+	const hashes = {}
 	for(let name of dirs){
 		var _dir = path.join(dir.absolutePath, name);
 		if (!(await fs.exists(_dir))) {
 			await fs.mkdir(_dir);
 			added.push(await _private.info(_dir));
+			hashes[name] = _private.encode(_dir)
 		}
 	}
 	return {
-		added: added
+		added,
+		hashes
 	}
 }
 
@@ -616,6 +619,24 @@ api.resize = async function(opts, res) {
 	}
 }
 
+
+async function removeDir(filePath) {
+	if (await fs.exists(filePath)) {
+		const files = await fs.readdir(filePath)
+		if (files.length > 0) {
+			for(let filename of files)
+			{
+				if ((await fs.stat(path.join(filePath, filename))).isDirectory()) {
+					await removeDir(path.join(filePath,filename))
+				} else {
+					await fs.unlink(path.join(filePath, filename))
+				}
+			}
+		}
+		await fs.rmdir(filePath)
+	}
+}
+
 api.rm = function(opts, res) {
 	return new Promise(async function(resolve, reject) {
 		var removed = [];
@@ -623,7 +644,7 @@ api.rm = function(opts, res) {
 			try {
                 var target = _private.decode(hash);
                 if((await fs.lstat(target.absolutePath)).isDirectory())
-                    await fs.rmdir(target.absolutePath)
+					await removeDir(target.absolutePath)
                 else
 				    await fs.unlink(target.absolutePath);
 				removed.push(hash);
@@ -775,11 +796,14 @@ api.tree = function(opts, res) {
 }
 
 
-api.upload = function(opts, res, files) {
+api.upload = function(opts, res) {
 	return new Promise(async function(resolve, reject) {
-		var target = _private.decode(opts.target);
-		var tasks = [];
-		for (var i = 0; i < files.length; i++) {
+		const tasks = [];
+		const files = opts.files;
+		const targets = []
+		for (let i = 0; i < files.length; i++) {
+			const target = _private.decode(opts.targets[i]);
+			targets.push(target)
 			tasks.push(writeFile(path.join(target.absolutePath, files[i].name), files[i], opts.progress))
 		}
         Promise.allSettled(tasks).then(async (values)=>{
@@ -787,7 +811,7 @@ api.upload = function(opts, res, files) {
                 const added = []
                 for(let i=0;i<values.length;i++){
                     if(values[i].status==='fulfilled'){
-                        added.push(await _private.info(path.join(target.absolutePath, files[i].name)))
+                        added.push(await _private.info(path.join(targets[i].absolutePath, files[i].name)))
                     }
                 }
                 resolve({'added': added})

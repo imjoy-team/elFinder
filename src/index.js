@@ -215,6 +215,8 @@ function setupCommunication(){
 	});
 
 	window.addEventListener("beforeunload", function (e) {
+		console.log('=======>DISPOSE_PORT')
+		debugger
 		navigator.serviceWorker.controller.postMessage({
 			type: 'DISPOSE_PORT',
 			clientId
@@ -228,40 +230,118 @@ function setupCommunication(){
 window.elFinderSupportBrowserFs = function(upload) {
 	"use strict";
 	initializeServiceWorker();
+
+	this.parseFiles = function(fm, target, files){
+		const dfrd = $.Deferred();
+		files.done(function(result) { // result: [files, paths, renames, hashes, mkdirs]
+			const cnt = result[0].length;
+			let multiMax=-1;
+			if (cnt) {
+				if (result[4] && result[4].length) {
+					// ensure directories
+					fm.request({
+						data   : {cmd : 'mkdir', target : target, dirs : result[4]},
+						notify : {type : 'mkdir', cnt : result[4].length},
+						preventFail: true
+					})
+					.fail(function(error) {
+						error = error || ['errUnknown'];
+						if (error[0] === 'errCmdParams') {
+							multiMax = 1;
+						} else {
+							multiMax = 0;
+							dfrd.reject(error);
+						}
+					})
+					.done(function(data) {
+						var rm = false;
+						if (!data.hashes) {
+							data.hashes = {};
+						}
+						result[1] = $.map(result[1], function(p, i) {
+							result[0][i]._relativePath = p.replace(/^\//, '');
+							p = p.replace(/\/[^\/]*$/, '');
+							if (p === '') {
+								return target;
+							} else {
+								if (data.hashes[p]) {
+									return data.hashes[p];
+								} else {
+									rm = true;
+									result[0][i]._remove = true;
+									return null;
+								}
+							}
+						});
+						if (rm) {
+							result[0] = $.grep(result[0], function(file) { return file._remove? false : true; });
+						}
+					})
+					.always(function(data) {
+						dfrd.resolve(result);
+					});
+					return;
+				} else {
+					result[1] = $.map(result[1], function() { return target; });
+				}
+
+				dfrd.resolve(result);
+			} else {
+				dfrd.reject(['errUploadNoFiles']);
+			}
+		}).fail(function(){
+			dfrd.reject();
+		});
+		return dfrd;
+	}
 	this.upload = function(data){
 		const self = this.fm;
 		const dfrd = $.Deferred();
-		const files       = data.input ? data.input.files : data.files.files;
+
+		
+		const target = data.target || self.cwd().hash;
+		const files       = data.input ? data.input.files : self.uploads.checkFile(data, self, target)
 		data.progress = (progress)=>{
 			self.notify({type : 'upload', cnt : 0, progress, size : 0});
 		}
-		api.upload(data, null, files).then((data)=>{
-			self.uploads.xhrUploading = false;
-			if (data) {
-				self.currentReqCmd = 'upload';
-				data.warning && console.warn(data.warning);
-				self.updateCache(data);
-				data.removed && data.removed.length && self.remove(data);
-				data.added   && data.added.length   && self.add(data);
-				data.changed && data.changed.length && self.change(data);
-				self.trigger('upload', data, false);
-				self.trigger('uploaddone');
-				if (data.toasts && Array.isArray(data.toasts)) {
-					$.each(data.toasts, function() {
-						this.msg && self.toast(this);
-					});
+		function saveFiles(opts){
+			api.upload(opts).then((data)=>{
+				self.uploads.xhrUploading = false;
+				if (data) {
+					self.currentReqCmd = 'upload';
+					data.warning && console.warn(data.warning);
+					self.updateCache(data);
+					data.removed && data.removed.length && self.remove(data);
+					data.added   && data.added.length   && self.add(data);
+					data.changed && data.changed.length && self.change(data);
+					self.trigger('upload', data, false);
+					self.trigger('uploaddone');
+					if (data.toasts && Array.isArray(data.toasts)) {
+						$.each(data.toasts, function() {
+							this.msg && self.toast(this);
+						});
+					}
+					data.sync && self.sync();
+					if (data.debug) {
+						self.responseDebug(data);
+						fm.debug('backend-debug', data);
+					}
 				}
-				data.sync && self.sync();
-				if (data.debug) {
-					self.responseDebug(data);
-					fm.debug('backend-debug', data);
-				}
-			}
-			dfrd.resolve(data);
-		}).catch((error)=>{
-			console.error(error)
-			dfrd.reject(error);
-		})
+				dfrd.resolve(data);
+			}).catch((error)=>{
+				console.error(error)
+				dfrd.reject(error);
+			})
+		}
+
+		if(files.done){
+			this.parseFiles(self, target, files).done((result)=>{
+				saveFiles({files: result[0], targets: result[1], renames: result[2], hashes: result[3]})
+			})
+		}
+		else{
+			saveFiles({targets: files.map(()=>target), files: files})
+		}
 		return dfrd
 	};
 	
@@ -274,30 +354,28 @@ window.elFinderSupportBrowserFs = function(upload) {
 	
 	
 	this.send = function(opts) {
-		const cmd = opts.data.cmd;
-		let xhr;
 		const dfrd = $.Deferred();
-		
+		// const xhr = $.ajax(opts)
+		// 	.fail(function(error) {
+		// 		dfrd.reject(error);
+		// 	})
+		// 	.done(function(raw) {
+		// 		dfrd.resolve(raw);
+		// 	});
 		dfrd.abort = function(e) {
-			if (xhr && xhr.state() == 'pending') {
-				xhr.quiet = true;
-				xhr.abort();
-			}
+			// if (xhr && xhr.state() == 'pending') {
+			// 	xhr.quiet = true;
+			// 	xhr.abort();
+			// }
 		};
-		xhr = $.ajax(opts)
-			.fail(function(error) {
-				dfrd.reject(error);
-			})
-			.done(function(raw) {
-				dfrd.resolve(raw);
-			});
-
-		// api[cmd](opts.data).then((result)=>{
-		// 	dfrd.resolve(result);
-		// }).catch((error)=>{
-		// 	console.error(error)
-		// 	dfrd.reject(error);
-		// })
+		console.log('sending cmd', opts.data)
+		const cmd = opts.data.cmd;
+		api[cmd](opts.data).then((result)=>{
+			dfrd.resolve(result);
+		}).catch((error)=>{
+			console.error(error)
+			dfrd.reject(error);
+		})
 		return dfrd;
 	};
 };
