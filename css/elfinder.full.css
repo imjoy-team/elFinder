@@ -1,6 +1,6 @@
 /*!
  * elFinder - file manager for web
- * Version 2.1.56 (2021-03-05)
+ * Version 2.1.56 (2021-03-06)
  * http://elfinder.org
  * 
  * Copyright 2009-2021, Studio 42
@@ -5121,7 +5121,7 @@ embed.elfinder-quicklook-preview-audio {
 
 .elfinder-button-icon-imjoyplugins {
     background: url(http://imjoy.io/static/img/imjoy-icon.svg) no-repeat;
-    background-size: 17px;
+    background-size: 15px;
 }
 
 /* button icon mirroring for rtl */
