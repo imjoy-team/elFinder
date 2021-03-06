@@ -425,78 +425,45 @@ api.mkdir = async function(opts, res) {
 	}
 }
 
-api.open = function(opts, res) {
-	return new Promise(async function(resolve, reject) {
-        try{
-		var data = {
-            init: opts.init,
-            netDrivers: [],
-            uplMaxFile: 1000,
-            uplMaxSize: "102400.0M"
-        };
-		data.options = {
-            disabled: config.disabled,
-			uiCmdMap: [],
-			tmbUrl: config.tmburl
-		}
-		var _init = opts.init && opts.init == true;
-		var _target = opts.target;
+api.open = async function(opts, res) {
+	const data = {
+		init: opts.init,
+		netDrivers: [],
+		uplMaxFile: 1000,
+		uplMaxSize: "102400.0M"
+	};
+	data.options = {
+		disabled: config.disabled,
+		uiCmdMap: [],
+		tmbUrl: config.tmburl
+	}
+	const _init = opts.init && opts.init == true;
+	let _target = opts.target;
 
-		if (_init) {
-			if (config.init) config.init();
-			data.api = "2.1";
-            
-                if (!_target) {
-                    _target = _private.encode(config.volumes[0] + path.sep);
-                }
-           
-			
-		
-		}
+	if (_init) {
+		if (config.init) config.init();
+		data.api = "2.1";
 		if (!_target) {
-			return reject('errCmdParams');
+			_target = _private.encode(config.volumes[0] + path.sep);
 		}
-		//NOTE target must always be directory
-		_target = _private.decode(_target);
-
-		_private.info(_target.absolutePath)
-			.then(async function(result) {
-				data.cwd = result;
-				var files;
-				try {
-					files = await fs.readdir(_target.absolutePath);
-				} catch (e) {
-					//errors.
-					console.log(e);
-					files = [];
-				}
-				var tasks = [];
-				each(files, function(file) {
-					tasks.push(_private.info(path.join(_target.absolutePath, file)));
-				})
-				return Promise.all(tasks);
-			})
-			.then(function(files) {
-				data.files = files;
-				if (_init) {
-					return _private.init();
-				} else {
-					return Promise.resolve(null);
-				}
-			})
-			.then(function(volumes) {
-				if (volumes != null) {
-					data.files = volumes.concat(data.files);
-				}
-			})
-			.then(function() {
-				resolve(data);
-			})
-        }
-        catch(e){
-            reject(e)
-        }
-	})
+	}
+	if (!_target) {
+		return reject('errCmdParams');
+	}
+	//NOTE target must always be directory
+	_target = _private.decode(_target);
+	const result = await _private.info(_target.absolutePath)
+	data.cwd = result;
+	data.files = []
+	const paths = await fs.readdir(_target.absolutePath);
+	for(let file of paths){
+		data.files.push(await _private.info(path.join(_target.absolutePath, file)));
+	}
+	if (_init) {
+		const volumes = await _private.init();
+		data.files = volumes.concat(data.files);
+	}
+	return data;
 }
 
 api.parents = function(opts, res) {
@@ -507,7 +474,7 @@ api.parents = function(opts, res) {
 		_private.init()
 			.then(function(results) {
 				tree = results;
-				var read = function(t) {
+				function read(t) {
 					var folder = path.dirname(t);
 					var isRoot = config.volumes.indexOf(t) >= 0;
 					if (isRoot) {
