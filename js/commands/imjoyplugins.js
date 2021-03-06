@@ -68,7 +68,6 @@ elFinder.prototype.commands.imjoyplugins = function() {
 	}
 
 	this.exec = async function(_dum, {loader, file}) {
-		const fm = self.fm;
 		const dfd = $.Deferred();
 		if(file.mime === 'directory'){
 			const children = self.fm.files(file.hash);

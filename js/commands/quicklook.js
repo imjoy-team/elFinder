@@ -4,6 +4,7 @@
  *
  * @author Wei Ouyang
  **/
+
 async function imjoyPreviews(ql, file) {
 	"use strict";
 	if(!window.imjoy) return false;
@@ -11,36 +12,47 @@ async function imjoyPreviews(ql, file) {
 	const fm = ql.fm;
 	const api = window.imjoy.api
 	const loaders = await api.getServices({type: '#file-loader'})
+	function getFileUrl(file){
+		return new Promise((resolve)=>{
+			fm.openUrl(file.hash, false, (url)=>{
+				resolve(url)
+			})
+		})
+	}
 	for(let loader of loaders){
 		try{
 			if (await loader.check(file)) {
 				const loading = $('<div class="elfinder-quicklook-info-data"><span class="elfinder-spinner-text">'+fm.i18n('nowLoading')+'</span><span class="elfinder-spinner"></span></div>').appendTo(ql.info.find('.elfinder-quicklook-info'));
-				const prog = $('<div class="elfinder-quicklook-info-progress"></div>').appendTo(loading);
-				const hideInfo = function() {
-					loading.remove();
-					// hide info/icon
-					ql.hideinfo();
-				}
-				const img = $('<div id="imjoy-preview-dialog" style="width:100%;height:100%;"></div>')
+				$('<div id="imjoy-preview-dialog" style="width:100%;height:100%;"></div>')
 					.hide()
 					.appendTo(preview)
-					
-				const opDfd = fm.openUrl(file.hash, false, async function(url) {
+					.fadeIn(100);
+					loading.remove();
+					ql.hideinfo();
+				if(file.mime === 'directory'){
+					const children = fm.files(file.hash);
+					const urls = []
+					for(let file of Object.values(children)){
+						file.url = await getFileUrl(file);
+						urls.push(file)
+					}
 					try{
-						img.fadeIn(100);
-						hideInfo();
-						file.url = url;
-						await loader.load({source: file, type: 'file', window_id: 'imjoy-preview-dialog'})
+						await loader.load({source: urls, type: 'directory', window_id: "imjoy-preview-dialog"})
 					}
 					catch(e){
-						img.innerHTML = `Failed to view with ${loader.name}: ${e}`
-						loading.remove();
+						console.error(e)
 					}
-				}, { progressBar: prog });
-				// stop loading on change file if not loaded yet
-				preview.one('change', function() {
-					opDfd && opDfd.state && opDfd.state() === 'pending' && opDfd.reject();
-				});
+				}
+				else{
+					const url = await getFileUrl(file)
+					try{
+						file.url = url;
+						await loader.load({source: file, type: 'file', window_id: "imjoy-preview-dialog"})
+					}
+					catch(e){
+						console.error(e)
+					}
+				}
 				return true
 			}
 		}
