@@ -231,7 +231,9 @@
 			},
 			// Initialization of editing node (this: this editors HTML node)
 			init : function(id, file, content, fm) {
-				this.data('url', content);
+				fm.openUrl(file.hash, false, (url)=>{
+					this.data('url', url);
+				})
 			},
 			load : function(base) {
 				var self = this,
