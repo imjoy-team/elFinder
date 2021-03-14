@@ -57,23 +57,111 @@
 						/* any bind functions etc. */
 						fm.bind('init', function() {
 							require(['imjoyLoader'], function (imjoyLoader) {
+							// inside iframe
+							if (window.self !== window.top) {
+								const rootNode = fm.getUI().get(0)
+                				fm.toggleFullscreen(rootNode)
+								loadImJoyRPC({
+									api_version: '0.2.3'
+								}).then(async (imjoyRPC) => {
+									const api = await imjoyRPC.setupRPC({
+										name: 'ImJoy elFinder',
+										description: 'A web file browser for ImJoy',
+										type: 'rpc-window',
+										version: '{{ IMJOY_ELFINDER_VERSION }}',
+										defaults: {
+											as_dialog: true
+										},
+									})
+
+									function setup() {
+										window.imjoy = {
+											api
+										}
+										api.log('elFinder plugin initialized.')
+									}
+									async function close() {
+										await api.close()
+									}
+									async function hide() {
+										await api.hide()
+									}
+
+									function getSelections(config) {
+										return new Promise((resolve) => {
+											const button_set = $('<div class="ui-dialog-buttonset"></div>')
+											const ok_button = $('<button class="dialog-btn ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only elfinder-btncnt-2 elfinder-tabstop">OK</button>')
+											ok_button.on('click', () => {
+												const selected = fm.selectedFiles()
+												resolve(selected);
+												api.close()
+											})
+											ok_button.hide()
+											fm.select(() => {
+												ok_button.show()
+											})
+											const cancel_button = $('<button style="margin-left: 5px;" class="dialog-btn ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only elfinder-btncnt-2 elfinder-tabstop">Cancel</button>')
+											cancel_button.on('click', () => {
+												resolve([])
+												api.close()
+											})
+											button_set.append(ok_button).append(cancel_button)
+											button_set.insertAfter(fm.getUI('statusbar').children('.elfinder-stat-size'));
+											// adjust the window size
+											window.dispatchEvent(new Event('resize'))
+
+											api.on("close", () => {
+												resolve([])
+												api.close()
+											})
+										})
+									}
+
+									function run() {
+
+									}
+									api.export({
+										setup,
+										run,
+										close,
+										hide,
+										getSelections
+									});
+								})
+							}
+							else{
 								const mainContainer = document.createElement('div');
-								document.getElementById('elfinder').appendChild(mainContainer)
+								document.getElementById('window-manager').appendChild(mainContainer)
 								// we need a hack here for some umd modules in the imjoy loader to load
 								const _define = window.define;
 								window.define = undefined
 								loadImJoyBasicApp({
-									version: '0.13.68',
+									version: '0.13.70',
 									process_url_query: true,
 									show_window_title: false,
 									show_progress_bar: true,
 									show_empty_window: true,
+									window_manager_container: 'window-manager',
 									menu_style: { position: "absolute", right: 0, top: "2px" },
 									window_style: {width: '100%', height: '100%'},
 									main_container: mainContainer,
 									imjoy_api: { } // override some imjoy API functions here
 								}).then(async app => {
 									const api = app.imjoy.api
+									const w = {
+										id: 'elfinder-window',
+										window_id: 'elfinder-window-container',
+										name: 'elFinder',
+										fullscreen: true
+									}
+									app.allWindows.push(w);
+        							app.addWindow(w);
+									app.$forceUpdate();
+									setTimeout(()=>{
+										const elfinderContainer = document.getElementById(w.window_id)
+										elfinderContainer.appendChild(document.getElementById('elfinder'))
+									}, 0)
+
 									function urlToBase64(url){
 										return new Promise(async (resolve, reject)=>{
 											const response = await fetch(url)
@@ -109,12 +197,12 @@
 										async load({source, type, window_id}){
 											if(type === 'file'){
 												const base64 = await urlToBase64(source.url)
-												const viewer = await api.createWindow({src: 'https://kaibu.org/', window_id})
+												const viewer = await api.createWindow({src: 'https://kaibu.org/', window_id, w: 10, h: 10})
 												await viewer.view_image(base64, {name: source.name});
 												await viewer.add_shapes([], {name: 'annotation'})
 											}
 											else if(type === 'directory'){
-												const viewer = await api.createWindow({src: 'https://kaibu.org/', window_id})
+												const viewer = await api.createWindow({src: 'https://kaibu.org/', window_id, w: 10, h: 10})
 												source = source.filter(file => file.mime.startsWith('image/'))
 												const nodes = source.map(file => {return {"title": file.name, "data": file, "isLeaf": true}})
 												await viewer.add_widget({
@@ -134,11 +222,58 @@
 
 										}
 									})
+									
+									// a demo content provider following the Jupyter Content Manager standard
+									// https://jupyter-notebook.readthedocs.io/en/stable/extending/contents.html#required-methods
+									await api.registerService({
+										type: '#content-provider',
+										name: 'MyData',
+										get(path){
+											return {
+												name: 'My Folder',
+												path: '/user',
+												type: 'directory',
+												created: '2021-01-23T18:25:43.511Z',
+												last_modified: '2021-01-23T18:25:43.511Z',
+												mimetype: null,
+												format: 'json',
+												content: [
+													{
+														name: 'My SubFolder',
+														path: '/user/me',
+														type: 'directory',
+														created: '2021-01-23T18:25:43.511Z',
+														last_modified: '2021-01-23T18:25:43.511Z',
+														mimetype: null,
+													}
+												]
+											}
+										},
+										save(model, path){
+
+										},
+										delete_file(path){
+
+										},
+										rename_file(old_path, new_path){
+
+										},
+										file_exists(path){
+
+										},
+										dir_exists(path){
+
+										},
+										is_hidden(path){
+
+										}
+									})
 									window.imjoy = app.imjoy;
 								}).finally(()=>{
 									// restore define
 									window.define = _define;
 								})
+							}
 							})
 						});
 						// for example set document.title dynamically.
@@ -166,12 +301,17 @@
 				height: 20px!important;
 				width: 13px!important;
 			}
+			div.elfinder{
+				width: 100%!important;
+				height: 100%!important;
+			}
 		</style>
 	</head>
 	<body>
 
 		<!-- Element where elFinder will be created (REQUIRED) -->
 		<div id="elfinder"></div>
+		<div id="window-manager"></div>
 
 	</body>
 </html>
