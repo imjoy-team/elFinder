@@ -5,8 +5,6 @@ import Jimp from 'jimp/browser/lib/jimp';
 import lz from 'lzutf8';
 import JSZip from 'jszip';
 
-console.log('JSZip', JSZip)
-
 const ArrayBufferView = Object.getPrototypeOf(
     Object.getPrototypeOf(new Uint8Array())
 ).constructor;
