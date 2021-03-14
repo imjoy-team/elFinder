@@ -1,6 +1,6 @@
 /**
  * @class  elFinder command "quicklook"
- * Using ImJoy `file-loader` services to preview the files
+ * Using ImJoy `file-preview` services to preview the files
  *
  * @author Wei Ouyang
  **/
@@ -11,7 +11,7 @@ async function imjoyPreviews(ql, file) {
 	const preview = ql.preview
 	const fm = ql.fm;
 	const api = window.imjoy.api
-	const loaders = await api.getServices({type: '#file-loader'})
+	const loaders = await api.getServices({type: '#file-preview'})
 	function getFileUrl(file){
 		return new Promise((resolve)=>{
 			fm.openUrl(file.hash, false, (url)=>{
