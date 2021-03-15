@@ -93,8 +93,10 @@ const config = {
 	tmburl: '/tmp/.tmb/',
 	disabled: ['chmod', 'zipdl', 'size'],
 	volumeicons: ['elfinder-navbar-root-local', 'elfinder-navbar-root-local'],
-	init(){
-		fs.mkdir( config.tmbroot );
+	async init(){
+		if ( !(await fs.exists( config.tmbroot )) ) {
+			fs.mkdir( config.tmbroot );
+		}
 	}
 }
 
@@ -439,7 +441,7 @@ api.open = async function(opts, res) {
 	let _target = opts.target;
 
 	if (_init) {
-		if (config.init) config.init();
+		if (config.init) await config.init();
 		data.api = "2.1";
 		if (!_target) {
 			_target = _private.encode(config.volumes[0] + path.sep);
