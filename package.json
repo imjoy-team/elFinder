@@ -36,11 +36,11 @@
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
-    "browser-mime": "github:imjoy-team/browser-mime",
     "browserfs": "^1.4.3",
     "jimp": "^0.16.1",
     "jszip": "^3.6.0",
     "lzutf8": "^0.6.0",
+    "mime": "^2.5.2",
     "underscore": "^1.12.0"
   }
 }
