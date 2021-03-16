@@ -161,7 +161,7 @@ async function handleRequest(request){
 		try{
 			const bytes = await api.fs.readFile(path)
 			const file = new File([bytes.buffer], api.path.basename(path), {
-				type: api.mime.lookup(path) || 'application/octet-stream',
+				type: api.mime.getType(path) || 'application/octet-stream',
 			});
 			return {body: file, status: 200}
 		}
