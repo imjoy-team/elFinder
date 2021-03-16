@@ -36,7 +36,7 @@
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
-    "browser-mime": "git+https://github.com/humphd/browser-mime.git",
+    "browser-mime": "github:imjoy-team/browser-mime",
     "browserfs": "^1.4.3",
     "jimp": "^0.16.1",
     "jszip": "^3.6.0",
