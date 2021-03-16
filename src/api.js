@@ -344,7 +344,15 @@ api.file = async function(opts, res) {
 	const path = target.absolutePath;
 	const size = (await api.fs.lstat(path)).size
 	const mime = api.mime.lookup(path) || 'application/octet-stream'
-	return {file: path, size, chunkSize: config.chunkSize, headers: {'content-type': mime}}
+	const headers = {'content-type': mime}
+	if(opts.download){
+		headers['content-disposition'] = 'attachments'
+	}
+	else{
+		headers['content-disposition'] = 'inline'
+	}
+	headers['content-length'] = `${size}`
+	return {file: path, size, chunkSize: config.chunkSize, headers}
 }
 
 api.get = function(opts, res) {

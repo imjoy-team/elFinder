@@ -18,7 +18,11 @@ function guidGenerator() {
     return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
 }
 
-const baseURL = location.pathname;
+let baseURL = location.pathname;
+if(baseURL.endsWith('.html')){
+	const tmp = baseURL.split('/')
+	baseURL = tmp.slice(0, tmp.length-1).join('/') + '/'
+}
 const clientId = guidGenerator()
 const CONNECTOR_URL = '/connector'
 function initializeServiceWorker(){
@@ -355,27 +359,34 @@ window.elFinderSupportBrowserFs = function(upload) {
 	
 	this.send = function(opts) {
 		const dfrd = $.Deferred();
-		// const xhr = $.ajax(opts)
-		// 	.fail(function(error) {
-		// 		dfrd.reject(error);
-		// 	})
-		// 	.done(function(raw) {
-		// 		dfrd.resolve(raw);
-		// 	});
-		dfrd.abort = function(e) {
-			// if (xhr && xhr.state() == 'pending') {
-			// 	xhr.quiet = true;
-			// 	xhr.abort();
-			// }
-		};
-		console.log('sending cmd', opts.data)
+		dfrd.abort = function() {};
+		
+		const query = decodeQuery(opts.url.split('?')[1])
+		if(query) Object.assign(opts.data, query)
 		const cmd = opts.data.cmd;
-		api[cmd](opts.data).then((result)=>{
-			dfrd.resolve(result);
-		}).catch((error)=>{
-			console.error(error)
-			dfrd.reject(error);
-		})
+		if(cmd === 'get' || cmd === 'file'){
+			const xhr = $.ajax(opts)
+			.fail(function(error) {
+				dfrd.reject(error);
+			})
+			.done(function(raw) {
+				dfrd.resolve(raw);
+			});
+			dfrd.abort = function() {
+				if (xhr && xhr.state() == 'pending') {
+					xhr.quiet = true;
+					xhr.abort();
+				}
+			};
+		}
+		else{
+			api[cmd](opts.data).then((result)=>{
+				dfrd.resolve(result);
+			}).catch((error)=>{
+				console.error(error)
+				dfrd.reject(error);
+			})
+		}
 		return dfrd;
 	};
 };
