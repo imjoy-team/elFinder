@@ -91,7 +91,7 @@ const config = {
     volumes: [],
     tmbroot: '/tmp/.tmb',
 	tmburl: '/tmp/.tmb/',
-	disabled: ['chmod', 'zipdl', 'size'],
+	disabled: ['chmod', 'size'],
 	volumeicons: ['elfinder-navbar-root-local', 'elfinder-navbar-root-local'],
 	async init(){
 		if ( !(await fs.exists( config.tmbroot )) ) {
@@ -194,7 +194,7 @@ api.archive = function(opts, res) {
 			.then(function() {
 				return _private.info(path.join(target.absolutePath, opts.name));
 			})
-			.then(function(info) {x
+			.then(function(info) {
 				resolve({
 					added: [info]
 				});
@@ -346,7 +346,7 @@ api.file = async function(opts, res) {
 	const mime = api.mime.lookup(path) || 'application/octet-stream'
 	const headers = {'content-type': mime}
 	if(opts.download){
-		headers['content-disposition'] = 'attachments'
+		headers['content-disposition'] = `attachments; filename="${target.name}"`
 	}
 	else{
 		headers['content-disposition'] = 'inline'
