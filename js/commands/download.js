@@ -359,7 +359,9 @@ elFinder.prototype.commands.download = function() {
 		
 		fileCnt = $.grep(files, function(f) { return f.mime === 'directory'? false : true; }).length;
 		link = $('<a>').hide().appendTo('body');
-		html5dl = (typeof link.get(0).download === 'string');
+
+		// disable for service-worker based server for ImJoy
+		html5dl = false; // (typeof link.get(0).download === 'string');
 		
 		if (zipOn && (fileCnt !== files.length || fileCnt >= (this.options.minFilesZipdl || 1))) {
 			link.remove();
