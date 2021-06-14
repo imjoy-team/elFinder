@@ -238,6 +238,7 @@ task('prebuild', function(){
 desc('build elFinder');
 task({'elfinder': ['clean', 'prebuild', 'css/elfinder.min.css', 'js/elfinder.min.js', 'misc', 'js/extras', 'js/worker']}, function(){
 	copyFile('./js/lib/service-worker.js', './service-worker.js');
+	copyFile('./CNAME', './CNAME');
 	console.log('elFinder build done');
 });
 
