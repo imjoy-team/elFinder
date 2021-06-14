@@ -21,6 +21,9 @@ module.exports = {
         { from: path.resolve(__dirname, 'src/ServiceWorkerWare.js'),
           to: path.resolve(__dirname, 'js/lib/ServiceWorkerWare.js')
         },
+        { from: path.resolve(__dirname, 'CNAME'),
+          to: path.resolve(__dirname, 'js/lib/CNAME')
+        },
       ],
     }),
   ]
