@@ -85,6 +85,7 @@ var dirmode = 0755,
 				path.join(src, 'js', 'lib', 'ServiceWorkerWare.js'),
 				path.join(src, 'Changelog'),
 				path.join(src, 'LICENSE.md'),
+				path.join(src, 'CNAME'),
 				path.join(src, 'README.md'),
 				path.join(src, 'composer.json'),
 				path.join(src, 'elfinder.html'),
@@ -238,7 +239,6 @@ task('prebuild', function(){
 desc('build elFinder');
 task({'elfinder': ['clean', 'prebuild', 'css/elfinder.min.css', 'js/elfinder.min.js', 'misc', 'js/extras', 'js/worker']}, function(){
 	copyFile('./js/lib/service-worker.js', './service-worker.js');
-	copyFile('./CNAME', './CNAME');
 	console.log('elFinder build done');
 });
 
