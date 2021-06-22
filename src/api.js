@@ -941,7 +941,7 @@ _private.info = function(p) {
 			if (r.mime === false) {
 				r.mime = 'application/binary';
 			}
-			if (r.mime.indexOf('image/') == 0) {
+			if (r.mime && r.mime.indexOf('image/') == 0) {
 				var filename = _private.encode(p);
 				var tmbPath = path.join(config.tmbroot, filename + ".png");
 				try{
