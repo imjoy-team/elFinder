@@ -1,24 +1,24 @@
 import * as BrowserFS from 'browserfs';
 import mime from 'mime';
-import {intersection, each} from 'underscore';
+import { intersection, each } from 'underscore';
 import Jimp from 'jimp/browser/lib/jimp';
 import lz from 'lzutf8';
 import JSZip from 'jszip';
 
 const ArrayBufferView = Object.getPrototypeOf(
-    Object.getPrototypeOf(new Uint8Array())
+	Object.getPrototypeOf(new Uint8Array())
 ).constructor;
 
 function initBrowserFS() {
 	return new Promise((resolve, reject) => {
 		BrowserFS.configure({
 			fs: "MountableFileSystem",
-				options: {
-					"/tmp": { fs: "InMemory", options: { storeName: "tmp" } },
-					"/home": { fs: "IndexedDB", options: { storeName: "home" } },
-					// '/mnt/h5': { fs: "HTML5FS", options: {} }
-				},
+			options: {
+				"/tmp": { fs: "InMemory", options: { storeName: "tmp" } },
+				"/home": { fs: "IndexedDB", options: { storeName: "home" } },
+				// '/mnt/h5': { fs: "HTML5FS", options: {} }
 			},
+		},
 			e => {
 				if (e) {
 					reject(e);
@@ -28,43 +28,43 @@ function initBrowserFS() {
 				const buffer = BrowserFS.BFSRequire("buffer");
 
 				//convert arraybuffer to Buffer
-				var convert = function(name, fn) {
-					return function() {
-                        const args = Array.prototype.slice.call(arguments);
-                        const newargs = [];
-                        for (let arg of args) {
-                            if (arg instanceof ArrayBuffer) {
-                            	newargs.push(buffer.Buffer(arg));
-                            } else if (arg instanceof ArrayBufferView) {
-                            	newargs.push(buffer.Buffer(arg.buffer));
-                            } else {
-                            	newargs.push(arg);
-                            }
-                        }
-                        const lastArg = newargs[newargs.length-1]
-                        // if the last argument is not a callback function
-                        // then we return a promise
-                        if(typeof lastArg === 'function' || name.endsWith('Sync') || name==='createWriteStream' || name ==='createReadStream'){
-                            return fn.apply(_fs, newargs);
-                        }
-                        else{
+				var convert = function (name, fn) {
+					return function () {
+						const args = Array.prototype.slice.call(arguments);
+						const newargs = [];
+						for (let arg of args) {
+							if (arg instanceof ArrayBuffer) {
+								newargs.push(buffer.Buffer(arg));
+							} else if (arg instanceof ArrayBufferView) {
+								newargs.push(buffer.Buffer(arg.buffer));
+							} else {
+								newargs.push(arg);
+							}
+						}
+						const lastArg = newargs[newargs.length - 1]
+						// if the last argument is not a callback function
+						// then we return a promise
+						if (typeof lastArg === 'function' || name.endsWith('Sync') || name === 'createWriteStream' || name === 'createReadStream') {
+							return fn.apply(_fs, newargs);
+						}
+						else {
 							//  fs.exists has no error passed to the callback
-							if(name ===  'exists'){
-								return new Promise((resolve, reject)=>{
-									newargs.push((data)=>{
+							if (name === 'exists') {
+								return new Promise((resolve, reject) => {
+									newargs.push((data) => {
 										resolve(data)
 									})
 									fn.apply(_fs, newargs);
 								})
 							}
-                            return new Promise((resolve, reject)=>{
-                                newargs.push((err, data)=>{
-                                    if(err) reject(err)
-                                    else resolve(data)
-                                })
-                                fn.apply(_fs, newargs);
-                            })
-                        }
+							return new Promise((resolve, reject) => {
+								newargs.push((err, data) => {
+									if (err) reject(err)
+									else resolve(data)
+								})
+								fn.apply(_fs, newargs);
+							})
+						}
 					};
 				};
 
@@ -74,7 +74,7 @@ function initBrowserFS() {
 				}
 				const path = BrowserFS.BFSRequire("path");
 				resolve({ fs, path });
-		});
+			});
 	});
 }
 
@@ -85,51 +85,67 @@ function initBrowserFS() {
 const _private = {};
 
 
+
+
 const config = {
 	chunkSize: 102400000,
-    roots: [],
-    volumes: [],
-    tmbroot: '/tmp/.tmb',
-	tmburl: '/tmp/.tmb/',
+	roots: [],
+	volumes: [],
+	tmbroot: '/tmp/.tmb',
+	tmburl: `/tmp/.tmb/`,
 	disabled: ['chmod', 'size'],
 	volumeicons: ['elfinder-navbar-root-local', 'elfinder-navbar-root-local'],
-	async init(){
-		if ( !(await fs.exists( config.tmbroot )) ) {
-			fs.mkdir( config.tmbroot );
+	async init() {
+		if (!(await fs.exists(config.tmbroot))) {
+			fs.mkdir(config.tmbroot);
 		}
 	}
 }
 
-config.acl = function(path) {
-	var volume = _private.volume(path);
-	return config.roots[volume].permissions || {
-		read: 1,
-		write: 1,
-		locked: 0
-	};
-
+let fs, path;
+async function initialize(baseURL) {
+	const roots = [
+		{
+			url: `${baseURL}fs/home/`,       //Required
+			path: "/home",   //Required
+			permissions: { read: 1, write: 1, lock: 0 }
+		},
+		{
+			url: `${baseURL}fs/tmp/`,   //Required
+			path: "/tmp",   //Required
+			permissions: { read: 1, write: 1, lock: 0 }
+		}]
+	config.roots = roots;
+	config.volumes = roots.map((r) => r.path)
+	config.tmburl = `${baseURL}fs/tmp/.tmb/`;
+	config.acl = function (path) {
+		var volume = _private.volume(path);
+		return config.roots[volume].permissions || {
+			read: 1,
+			write: 1,
+			locked: 0
+		};
+	}
+	await initBrowserFS().then((bfs) => {
+		console.log('BrowserFS initialized successfully.')
+		fs = bfs.fs
+		path = bfs.path
+		api.fs = fs
+		api.path = path
+	})
 }
 
-export const api = {mime, config};
-
-let fs, path;
-initBrowserFS().then((bfs)=>{
- console.log('BrowserFS initialized successfully.')
- fs = bfs.fs
- path = bfs.path
- api.fs = fs
- api.path = path
-})
+export const api = { mime, config, initialize };
 
 function parseFile(file, chunk_callback) {
-	return new Promise((resolve, reject)=>{
-		var fileSize   = file.size;
-		var chunkSize  =  config.chunkSize; // bytes
-		var offset     = 0;
+	return new Promise((resolve, reject) => {
+		var fileSize = file.size;
+		var chunkSize = config.chunkSize; // bytes
+		var offset = 0;
 		var chunkReaderBlock = null;
-	
-		var readEventHandler = async function(evt) {
-			try{
+
+		var readEventHandler = async function (evt) {
+			try {
 				if (evt.target.error == null) {
 					await chunk_callback(evt.target.result, offset); // callback for handling read chunk
 					offset += evt.target.result.byteLength;
@@ -142,44 +158,46 @@ function parseFile(file, chunk_callback) {
 					resolve();
 					return;
 				}
-		
+
 				// of to the next chunk
 				chunkReaderBlock(offset, chunkSize, file);
 			}
-			catch(e){
+			catch (e) {
 				reject(e)
 			}
 		}
-	
-		chunkReaderBlock = function(_offset, length, _file) {
+
+		chunkReaderBlock = function (_offset, length, _file) {
 			var r = new FileReader();
 			var blob = _file.slice(_offset, length + _offset);
 			r.onload = readEventHandler;
 			r.readAsArrayBuffer(blob);
 		}
-	
+
 		// now let's start the read with the first block
 		chunkReaderBlock(offset, chunkSize, file);
 	})
 }
 
-async function writeFile(path, file, progressCallback) {
+async function writeFile(path, file, writeOffset, mode, progressCallback) {
 	let handle
-	try{
-		handle = await fs.open(path, 'w');
-		await parseFile(file, (chunk, offset)=>{
-			return new Promise((resolve, reject)=>{
-				fs.write(handle, new Uint8Array(chunk), 0, chunk.byteLength, offset, (error)=>{
-					if(progressCallback) progressCallback(offset + chunk.byteLength)
-					if(error) reject(error)
+	writeOffset = writeOffset || 0;
+	mode = mode || 'w';
+	try {
+		handle = await fs.open(path, mode);
+		await parseFile(file, (chunk, offset) => {
+			return new Promise((resolve, reject) => {
+				fs.write(handle, new Uint8Array(chunk), 0, chunk.byteLength, writeOffset + offset, (error) => {
+					if (progressCallback) progressCallback(offset + chunk.byteLength)
+					if (error) reject(error)
 					else resolve()
 				})
 			})
 		})
 		await fs.close(handle)
 	}
-	catch(e){
-		if(handle){
+	catch (e) {
+		if (handle) {
 			await fs.close(handle)
 			await fs.unlink(path);
 		}
@@ -187,29 +205,29 @@ async function writeFile(path, file, progressCallback) {
 	}
 }
 
-api.archive = function(opts, res) {
-	return new Promise(function(resolve, reject) {
+api.archive = function (opts, res) {
+	return new Promise(function (resolve, reject) {
 		var target = _private.decode(opts.target);
 		_private.compress(opts.targets, path.join(target.absolutePath, opts.name))
-			.then(function() {
+			.then(function () {
 				return _private.info(path.join(target.absolutePath, opts.name));
 			})
-			.then(function(info) {
+			.then(function (info) {
 				resolve({
 					added: [info]
 				});
 			})
-			.catch(function(err) {
+			.catch(function (err) {
 				reject(err);
 			})
 	})
 }
 
-api.dim = function(opts, res) {
-	return new Promise(async function(resolve, reject) {
+api.dim = function (opts, res) {
+	return new Promise(async function (resolve, reject) {
 		var target = _private.decode(opts.target);
 		Jimp.read(await fs.readFile(target.absolutePath))
-			.then(function(img) {
+			.then(function (img) {
 				resolve({
 					dim: img.bitmap.width + 'x' + img.bitmap.height
 				});
@@ -218,101 +236,101 @@ api.dim = function(opts, res) {
 }
 
 
-async function copyFile( source, target ) {
-    var targetFile = target;
+async function copyFile(source, target) {
+	var targetFile = target;
 
-    // If target is a directory, a new file with the same name will be created
-    if (await fs.exists( target ) ) {
-        if ( (await fs.lstat( target )).isDirectory() ) {
-            targetFile = path.join( target, path.basename( source ) );
-        }
-    }
+	// If target is a directory, a new file with the same name will be created
+	if (await fs.exists(target)) {
+		if ((await fs.lstat(target)).isDirectory()) {
+			targetFile = path.join(target, path.basename(source));
+		}
+	}
 
-    await fs.writeFile(targetFile, await fs.readFile(source));
+	await fs.writeFile(targetFile, await fs.readFile(source));
 }
 
-async function copyFolderRecursive( source, target ) {
-    var files = [];
+async function copyFolderRecursive(source, target) {
+	var files = [];
 
-    // Check if folder needs to be created or integrated
-    var targetFolder = target;
-    if ( !(await fs.exists( targetFolder )) ) {
-        await fs.mkdir( targetFolder );
-    }
+	// Check if folder needs to be created or integrated
+	var targetFolder = target;
+	if (!(await fs.exists(targetFolder))) {
+		await fs.mkdir(targetFolder);
+	}
 
-    // Copy
-    if ( (await fs.lstat( source )).isDirectory() ) {
-        files = await fs.readdir( source );
-        for(let file of files){
-            var curSource = path.join( source, file );
-            if ( (await fs.lstat( curSource )).isDirectory() ) {
-                await copyFolderRecursive( curSource, targetFolder );
-            } else {
-                await copyFile( curSource, targetFolder );
-            }
-        }
-    }
-	else{
+	// Copy
+	if ((await fs.lstat(source)).isDirectory()) {
+		files = await fs.readdir(source);
+		for (let file of files) {
+			var curSource = path.join(source, file);
+			if ((await fs.lstat(curSource)).isDirectory()) {
+				await copyFolderRecursive(curSource, targetFolder);
+			} else {
+				await copyFile(curSource, targetFolder);
+			}
+		}
+	}
+	else {
 		throw new Error('Source is not a directory')
 	}
 }
 
-api.copy = function(opts, res) {
-	return new Promise(async function(resolve, reject) {
+api.copy = function (opts, res) {
+	return new Promise(async function (resolve, reject) {
 		if (await fs.exists(opts.dst)) {
 			return reject('Destination exists');
 		}
-		if ( (await fs.lstat( opts.src )).isDirectory() ) {
+		if ((await fs.lstat(opts.src)).isDirectory()) {
 			await copyFolderRecursive(opts.src, opts.dst)
 		}
-		else{
+		else {
 			await copyFile(opts.src, opts.dst)
 		}
 		_private.info(opts.dst)
-			.then(function(info) {
+			.then(function (info) {
 				resolve({
 					added: [info],
 					changed: [_private.encode(path.dirname(opts.dst))]
 				});
 			})
-			.catch(function(err) {
+			.catch(function (err) {
 				reject(err);
 			})
 	})
 }
 
-function urlToFile(url, filename, mimeType){
+function urlToFile(url, filename, mimeType) {
 	return (fetch(url)
-		.then(function(res){return res.arrayBuffer();})
-		.then(function(buf){return new File([buf], filename, {type:mimeType});})
+		.then(function (res) { return res.arrayBuffer(); })
+		.then(function (buf) { return new File([buf], filename, { type: mimeType }); })
 	);
 }
 
-api.put = async function(opts, res) {
-	try{
+api.put = async function (opts, res) {
+	try {
 		var target = _private.decode(opts.target);
-		if(opts.encoding === 'scheme'){
+		if (opts.encoding === 'scheme') {
 			await writeFile(target.absolutePath, await urlToFile(opts.content, target.name, mime.getType(target.absolutePath)))
 		}
-		else{
-			await fs.writeFile(target.absolutePath, opts.content, {encoding: opts.encoding || 'utf8'});	
+		else {
+			await fs.writeFile(target.absolutePath, opts.content, { encoding: opts.encoding || 'utf8' });
 		}
-		if(mime.getType(target.absolutePath).startsWith('image/')){
+		if (mime.getType(target.absolutePath).startsWith('image/')) {
 			await generateThumbnail(target.absolutePath)
 		}
-		return {changed: [await _private.info(target.absolutePath)]}
+		return { changed: [await _private.info(target.absolutePath)] }
 	}
-	catch(e){
+	catch (e) {
 		console.error(e)
-		return {error: ['errSave', opts.target]}
+		return { error: ['errSave', opts.target] }
 	}
 }
 
 
-api.duplicate = function(opt) {
-	return new Promise(function(resolve, reject) {
+api.duplicate = function (opt) {
+	return new Promise(function (resolve, reject) {
 		var tasks = [];
-		each(opt.targets, function(target) {
+		each(opt.targets, function (target) {
 			var _t = _private.decode(target);
 			var ext = path.extname(_t.name);
 			var fil = path.basename(_t.name, ext);
@@ -324,41 +342,41 @@ api.duplicate = function(opt) {
 			}));
 		})
 		Promise.all(tasks)
-			.then(function(info) {
+			.then(function (info) {
 				var rtn = {
 					added: []
 				};
-				each(info, function(i) {
+				each(info, function (i) {
 					rtn.added.push(i.added[0]);
 				})
 				resolve(rtn);
 			})
-			.catch(function(e) {
+			.catch(function (e) {
 				reject(e);
 			})
 	})
 }
 
-api.file = async function(opts, res) {
+api.file = async function (opts, res) {
 	const target = _private.decode(opts.target);
 	const path = target.absolutePath;
 	const size = (await api.fs.lstat(path)).size
 	const mime = api.mime.getType(path) || 'application/octet-stream'
-	const headers = {'content-type': mime}
-	if(opts.download){
+	const headers = { 'content-type': mime }
+	if (opts.download) {
 		headers['content-disposition'] = `attachments; filename="${target.name}"`
 	}
-	else{
+	else {
 		headers['content-disposition'] = 'inline'
 	}
 	headers['content-length'] = `${size}`
-	return {file: path, size, chunkSize: config.chunkSize, headers}
+	return { file: path, size, chunkSize: config.chunkSize, headers }
 }
 
-api.get = function(opts, res) {
-	return new Promise(function(resolve, reject) {
+api.get = function (opts, res) {
+	return new Promise(function (resolve, reject) {
 		var target = _private.decode(opts.target);
-		fs.readFile(target.absolutePath, 'utf8', function(err, data) {
+		fs.readFile(target.absolutePath, 'utf8', function (err, data) {
 			if (err) return reject(err);
 			resolve({
 				content: data
@@ -367,9 +385,9 @@ api.get = function(opts, res) {
 	})
 }
 
-api.info = async function(opts, res){
+api.info = async function (opts, res) {
 	const files = []
-	for(let target of opts.targets){
+	for (let target of opts.targets) {
 		target = _private.decode(target);
 		const info = await _private.info(target.absolutePath)
 		files.push(info)
@@ -379,13 +397,13 @@ api.info = async function(opts, res){
 	}
 }
 
-api.ls = function(opts, res) {
-	return new Promise(function(resolve, reject) {
+api.ls = function (opts, res) {
+	return new Promise(function (resolve, reject) {
 		if (!opts.target) return reject('errCmdParams');
 		var info = _private.decode(opts.target);
 		_private.readdir(info.absolutePath)
-			.then(function(files) {
-				var _files = files.map(function(e) {
+			.then(function (files) {
+				var _files = files.map(function (e) {
 					return e.name
 				});
 				if (opts.intersect) {
@@ -400,7 +418,7 @@ api.ls = function(opts, res) {
 
 
 //TODO check permission.
-api.mkfile = async function(opts, res) {
+api.mkfile = async function (opts, res) {
 	var dir = _private.decode(opts.target);
 	var _file = path.join(dir.absolutePath, opts.name);
 	const handle = await fs.open(_file, 'w');
@@ -411,7 +429,7 @@ api.mkfile = async function(opts, res) {
 }
 
 //TODO check permission.
-api.mkdir = async function(opts, res) {
+api.mkdir = async function (opts, res) {
 	var dir = _private.decode(opts.target);
 	var dirs = opts.dirs || [];
 	if (opts.name) {
@@ -419,7 +437,7 @@ api.mkdir = async function(opts, res) {
 	}
 	const added = []
 	const hashes = {}
-	for(let name of dirs){
+	for (let name of dirs) {
 		var _dir = path.join(dir.absolutePath, name);
 		if (!(await fs.exists(_dir))) {
 			await fs.mkdir(_dir);
@@ -433,7 +451,7 @@ api.mkdir = async function(opts, res) {
 	}
 }
 
-api.open = async function(opts, res) {
+api.open = async function (opts, res) {
 	const data = {
 		init: opts.init,
 		netDrivers: [],
@@ -464,7 +482,7 @@ api.open = async function(opts, res) {
 	data.cwd = result;
 	data.files = []
 	const paths = await fs.readdir(_target.absolutePath);
-	for(let file of paths){
+	for (let file of paths) {
 		data.files.push(await _private.info(path.join(_target.absolutePath, file)));
 	}
 	if (_init) {
@@ -474,13 +492,13 @@ api.open = async function(opts, res) {
 	return data;
 }
 
-api.parents = function(opts, res) {
-	return new Promise(function(resolve, reject) {
+api.parents = function (opts, res) {
+	return new Promise(function (resolve, reject) {
 		if (!opts.target) return reject('errCmdParams');
 		var dir = _private.decode(opts.target);
 		var tree;
 		_private.init()
-			.then(function(results) {
+			.then(function (results) {
 				tree = results;
 				function read(t) {
 					var folder = path.dirname(t);
@@ -491,20 +509,20 @@ api.parents = function(opts, res) {
 						});
 					} else {
 						_private.readdir(folder)
-							.then(function(files) {
+							.then(function (files) {
 								var tasks = [];
-								each(files, function(file) {
+								each(files, function (file) {
 									if (file.isdir) {
 										tasks.push(_private.info(path.join(folder, file.name)));
 									}
 								})
 								Promise.all(tasks)
-									.then(function(folders) {
+									.then(function (folders) {
 										tree = tree.concat(folders);
 										read(folder);
 									});
 							})
-							.catch(function(e) {
+							.catch(function (e) {
 								reject(e);
 							})
 					}
@@ -514,11 +532,11 @@ api.parents = function(opts, res) {
 	})
 }
 
-api.paste = function(opts, res) {
-	return new Promise(function(resolve, reject) {
+api.paste = function (opts, res) {
+	return new Promise(function (resolve, reject) {
 		var tasks = [];
 		var dest = _private.decode(opts.dst);
-		each(opts.targets, function(target) {
+		each(opts.targets, function (target) {
 			var info = _private.decode(target);
 			var name = info.name;
 			if (opts.renames && opts.renames.indexOf(info.name) >= 0) {
@@ -539,13 +557,13 @@ api.paste = function(opts, res) {
 			}
 		})
 		Promise.all(tasks)
-			.then(function(results) {
+			.then(function (results) {
 				var rtn = {
 					added: [],
 					removed: [],
 					changed: []
 				}
-				each(results, function(r) {
+				each(results, function (r) {
 					rtn.added.push(r.added[0]);
 					if (r.removed && r.removed[0]) {
 						rtn.removed.push(r.removed[0]);
@@ -556,13 +574,13 @@ api.paste = function(opts, res) {
 				})
 				resolve(rtn);
 			})
-			.catch(function(e) {
+			.catch(function (e) {
 				reject(e);
 			})
 	})
 }
 
-api.rename = function(opts, res) {
+api.rename = function (opts, res) {
 	if (!opts.target) return Promise.reject('errCmdParams');
 	var dir = _private.decode(opts.target);
 	var dirname = path.dirname(dir.absolutePath);
@@ -572,10 +590,10 @@ api.rename = function(opts, res) {
 	})
 }
 
-api.resize = async function(opts, res) {
+api.resize = async function (opts, res) {
 	const target = _private.decode(opts.target);
 	let image = await Jimp.read(await fs.readFile(target.absolutePath))
-	
+
 	if (opts.mode == 'resize') {
 		image = image.resize(parseInt(opts.width), parseInt(opts.height))
 	} else if (opts.mode == 'crop') {
@@ -599,10 +617,9 @@ async function removeDir(filePath) {
 	if (await fs.exists(filePath)) {
 		const files = await fs.readdir(filePath)
 		if (files.length > 0) {
-			for(let filename of files)
-			{
+			for (let filename of files) {
 				if ((await fs.stat(path.join(filePath, filename))).isDirectory()) {
-					await removeDir(path.join(filePath,filename))
+					await removeDir(path.join(filePath, filename))
 				} else {
 					await fs.unlink(path.join(filePath, filename))
 				}
@@ -612,21 +629,21 @@ async function removeDir(filePath) {
 	}
 }
 
-api.rm = function(opts, res) {
-	return new Promise(async function(resolve, reject) {
+api.rm = function (opts, res) {
+	return new Promise(async function (resolve, reject) {
 		var removed = [];
-		for(let hash of opts.targets){
+		for (let hash of opts.targets) {
 			try {
-                var target = _private.decode(hash);
-                if((await fs.lstat(target.absolutePath)).isDirectory())
+				var target = _private.decode(hash);
+				if ((await fs.lstat(target.absolutePath)).isDirectory())
 					await removeDir(target.absolutePath)
-                else
-				    await fs.unlink(target.absolutePath);
+				else
+					await fs.unlink(target.absolutePath);
 				removed.push(hash);
 			} catch (err) {
 				console.log(err);
 				reject(err);
-                break;
+				break;
 			}
 		}
 		resolve({
@@ -636,7 +653,7 @@ api.rm = function(opts, res) {
 }
 
 //not impletemented
-api.size = function(opts, res) {
+api.size = function (opts, res) {
 	return Promise.resolve({
 		size: 'unkown'
 	});
@@ -644,7 +661,7 @@ api.size = function(opts, res) {
 
 async function walk(dir, data_callback) {
 	const files = await fs.readdir(dir)
-	for(let file of files){
+	for (let file of files) {
 		const filepath = path.join(dir, file);
 		const stats = await fs.stat(filepath)
 		if (stats.isDirectory()) {
@@ -655,32 +672,32 @@ async function walk(dir, data_callback) {
 	}
 }
 
-api.search = function(opts, res) {
-	return new Promise(async function(resolve, reject) {
+api.search = function (opts, res) {
+	return new Promise(async function (resolve, reject) {
 		if (!opts.q || opts.q.length < 1) reject({
 			message: 'errCmdParams'
 		});
 		var target = _private.decode(opts.target);
 		var files = [];
-		try{
-			await walk(target.absolutePath, async (path)=>{
+		try {
+			await walk(target.absolutePath, async (path) => {
 				files.push(await _private.info(path));
 			})
 			resolve({
 				files: files
 			})
 		}
-		catch(err){
+		catch (err) {
 			reject(err);
-		}		
+		}
 	})
 }
 
-async function saveImage(img, path){
-	return new Promise((resolve, reject)=>{
+async function saveImage(img, path) {
+	return new Promise((resolve, reject) => {
 		img.getBase64(mime.getType(path), async (err, res) => {
-			try{
-				if(err){
+			try {
+				if (err) {
 					reject(err)
 					return
 				}
@@ -689,120 +706,191 @@ async function saveImage(img, path){
 				await writeFile(path, blob);
 				resolve()
 			}
-			catch(e){
+			catch (e) {
 				reject(e)
-			}	
-		}) 
+			}
+		})
 	});
 }
 
-async function generateThumbnail(file){
+async function generateThumbnail(file) {
 	const img = await Jimp.read(await fs.readFile(file))
 	const op = _private.encode(file);
 	await saveImage(img.resize(48, 48), path.join(config.tmbroot, op + ".png"))
 	return op
 }
 
-api.tmb = function(opts, res) {
-	return new Promise(async function(resolve, reject) {
+api.tmb = function (opts, res) {
+	return new Promise(async function (resolve, reject) {
 		var files = [];
 		if (opts.current) {
 			var dir = _private.decode(opts.current);
 			var items = await fs.readdir(dir.absolutePath);
-			each(items, function(item) {
+			each(items, function (item) {
 				var _m = mime.getType(item);
 				if (_m !== false && _m.indexOf('image/') == 0) {
 					files.push(path.join(dir.absolutePath, item));
 				}
 			})
 		} else if (opts.targets) {
-			each(opts.targets, function(target) {
+			each(opts.targets, function (target) {
 				var _t = _private.decode(target);
 				files.push(_t.absolutePath);
 			})
 		}
 		//create.
 		var tasks = [];
-		for(let file of files){
-			if(!file.startsWith(config.tmbroot)){
+		for (let file of files) {
+			if (!file.startsWith(config.tmbroot)) {
 				tasks.push(generateThumbnail(file));
 			}
 		}
 		Promise.all(tasks)
-			.then(function(hashes) {
+			.then(function (hashes) {
 				var rtn = {};
-				each(hashes, function(hash) {
+				each(hashes, function (hash) {
 					rtn[hash] = hash + '.png';
 				})
 				resolve({
 					images: rtn
 				});
 			})
-			.catch(function(err) {
+			.catch(function (err) {
 				console.log(err);
 				reject(err);
 			})
 	})
 }
 
-api.tree = function(opts, res) {
-	return new Promise(function(resolve, reject) {
+api.tree = function (opts, res) {
+	return new Promise(function (resolve, reject) {
 		if (!opts.target) return reject('errCmdParams');
 		var dir = _private.decode(opts.target);
 		_private.readdir(dir.absolutePath)
-			.then(function(files) {
+			.then(function (files) {
 				var tasks = [];
-				each(files, function(file) {
+				each(files, function (file) {
 					if (file.isdir) {
 						tasks.push(_private.info(path.join(dir.absolutePath, file.name)));
 					}
 				})
 				return Promise.all(tasks);
 			})
-			.then(function(folders) {
+			.then(function (folders) {
 				resolve({
 					tree: folders
 				});
 			})
-			.catch(function(e) {
+			.catch(function (e) {
 				reject(e);
 			})
 	})
 }
 
 
-api.upload = function(opts, res) {
-	return new Promise(async function(resolve, reject) {
+api.upload = function (opts, res) {
+	return new Promise(async function (resolve, reject) {
+		const target = opts.target
+		const files = opts.upload
+		const paths = opts.upload_path
+		const renames = opts.renames
+		if (renames && renames.length === files.length) {
+			for (let i = 0; i < renames.length; i++) {
+				files[i].name = renames[i]
+			}
+		}
+		opts.targets = (paths && paths.length === files.length && paths) || files.map(() => target)
 		const tasks = [];
-		const files = opts.files;
 		const targets = []
+		let _chunkmerged = false;
+		let _name;
 		for (let i = 0; i < files.length; i++) {
 			const target = _private.decode(opts.targets[i]);
 			targets.push(target)
-			tasks.push(writeFile(path.join(target.absolutePath, files[i].name), files[i], opts.progress))
+
+			if (opts.chunk && opts.range) {
+				const tmp = opts.chunk.split(".")
+				const name = tmp.slice(0, tmp.length - 2).join(".")
+				const tmp2 = opts.range.split(",").map(parseFloat)
+				const offset = tmp2[0]
+				if (tmp2[0] + tmp2[1] === tmp2[2]) {
+					_chunkmerged = name;
+					_name = name;
+				}
+				target.fileName = name;
+				tasks.push(writeFile(path.join(target.absolutePath, name), files[i], offset, 'a', opts.progress))
+				console.log("chunk written===>", name, offset, target.name, target.fileName)
+			}
+			else if (opts.chunk && !opts.range) {
+				target.fileName = opts.chunk;
+				console.log("chunk merged", opts.chunk, await fs.exists(path.join(target.absolutePath, target.fileName)))
+				tasks.push(fs.exists(path.join(target.absolutePath, target.fileName)))
+			}
+			else {
+				target.fileName = files[i].name;
+				tasks.push(writeFile(path.join(target.absolutePath, files[i].name), files[i], 0, 'w', opts.progress))
+			}
+			console.log("path ==>", path.join(target.absolutePath, target.fileName))
 		}
-        Promise.allSettled(tasks).then(async (values)=>{
-            try{
-                const added = []
-                for(let i=0;i<values.length;i++){
-                    if(values[i].status==='fulfilled'){
-                        added.push(await _private.info(path.join(targets[i].absolutePath, files[i].name)))
-                    }
-                }
-                resolve({'added': added})
-            }
-            catch(e){
-                reject(e)
-            }
-          
-        }).catch((e)=>{
-            reject(e)
-        })
+		Promise.allSettled(tasks).then(async (values) => {
+			try {
+				// chunk merge request
+				if (!opts.range && opts.chunk) {
+					if (values[0]) {
+						console.log('========2222===>')
+						resolve({
+							added: [await _private.info(path.join(targets[0].absolutePath, targets[0].fileName))]
+						})
+					}
+					else {
+						console.log('========3333===>')
+						resolve({
+							added: [],
+							warning: "Failed to upload"
+						})
+					}
+				}
+				// chunking
+				else if (!_chunkmerged && opts.chunk) {
+					console.log('========11111===>')
+					resolve({
+						added: []
+					})
+				}
+				// last chunk
+				else if (_chunkmerged) {
+					console.log('========2222111111===>')
+					resolve({
+						_chunkmerged,
+						_name,
+						added: [await _private.info(path.join(targets[0].absolutePath, targets[0].fileName))],
+					})
+				}
+				// no chunking, for small files
+				else {
+					const added = []
+					for (let i = 0; i < values.length; i++) {
+						if (values[i].status === 'fulfilled') {
+							console.log("===added==>", targets[i].absolutePath, targets[i].fileName)
+							added.push(await _private.info(path.join(targets[i].absolutePath, targets[i].fileName)))
+						}
+					}
+					resolve({ 'added': added })
+
+				}
+			}
+			catch (e) {
+				reject(e)
+			}
+
+		}).catch((e) => {
+			reject(e)
+		})
 	})
 }
 
-api.zipdl = function(opts, res) {
-	return new Promise(function(resolve, reject) {
+api.zipdl = function (opts, res) {
+	return new Promise(function (resolve, reject) {
 		if (!opts.targets || !opts.targets[0]) return reject({
 			message: 'errCmdParams'
 		});
@@ -815,7 +903,7 @@ api.zipdl = function(opts, res) {
 			var name = path.basename(dir);
 			var file = path.join(dir, name + '.zip');
 			_private.compress(opts.targets, file)
-				.then(function() {
+				.then(function () {
 					resolve({
 						zipdl: {
 							file: _private.encode(file),
@@ -824,7 +912,7 @@ api.zipdl = function(opts, res) {
 						}
 					})
 				})
-				.catch(function(err) {
+				.catch(function (err) {
 					reject(err);
 				})
 		}
@@ -832,21 +920,21 @@ api.zipdl = function(opts, res) {
 }
 
 
-_private.move = function(opts, res) {
-	return new Promise(async function(resolve, reject) {
+_private.move = function (opts, res) {
+	return new Promise(async function (resolve, reject) {
 		// if (await fs.exists(opts.dst)) {
 		// 	return reject('Destination exists');
 		// }
-		fs.rename(opts.src, opts.dst, function(err) {
+		fs.rename(opts.src, opts.dst, function (err) {
 			if (err) return reject(err);
 			_private.info(opts.dst)
-				.then(function(info) {
+				.then(function (info) {
 					resolve({
 						added: [info],
 						removed: opts.upload ? [] : [_private.encode(opts.src)]
 					});
 				})
-				.catch(function(err) {
+				.catch(function (err) {
 					reject(err);
 				})
 		})
@@ -854,16 +942,16 @@ _private.move = function(opts, res) {
 }
 
 //_private
-_private.compress = async function(files, dest) {
+_private.compress = async function (files, dest) {
 	var zip = new JSZip();
-	for(let file of files){
+	for (let file of files) {
 		var target = _private.decode(file);
 		//check if target is file or dir
 		if ((await fs.lstat(target.absolutePath))
 			.isDirectory()) {
 			const basePath = path.dirname(target.absolutePath);
-			await walk(target.absolutePath, async (path)=>{
-				const relativePath =  path.relative(basePath, path)
+			await walk(target.absolutePath, async (path) => {
+				const relativePath = path.relative(basePath, path)
 				zip.file(relativePath, await fs.readFile(path))
 			})
 		} else {
@@ -871,16 +959,16 @@ _private.compress = async function(files, dest) {
 			zip.file(target.name, c);
 		}
 	}
-	const content = await zip.generateAsync({type:"blob"})
+	const content = await zip.generateAsync({ type: "blob" })
 	await writeFile(dest, content)
 	return true
 }
 
 function base64AddPadding(str) {
-    return str + Array((4 - str.length % 4) % 4 + 1).join('=');
+	return str + Array((4 - str.length % 4) % 4 + 1).join('=');
 }
 
-_private.decode = function(dir) {
+_private.decode = function (dir) {
 	var root, code, name, volume;
 	if (!dir || dir.length < 4) throw Error('Invalid Path');
 	if (dir[0] != 'v' || dir[2] != '_') throw Error('Invalid Path');
@@ -906,11 +994,11 @@ _private.decode = function(dir) {
 }
 
 //Used by _private.info, api.opne, api.tmb, api.zipdl
-_private.encode = function(dir) {
+_private.encode = function (dir) {
 	var info = _private.parse(dir);
 	var relative = lz.compress(info.path, {
-			outputEncoding: "Base64"
-		})
+		outputEncoding: "Base64"
+	})
 		.replace(/=+$/g, '')
 		.replace(/\+/g, '-')
 		.replace(/\//g, '_')
@@ -918,17 +1006,17 @@ _private.encode = function(dir) {
 	return 'v' + info.volume + '_' + relative;
 }
 
-_private.filepath = function(volume, filename) {
+_private.filepath = function (volume, filename) {
 	if (volume < 0 || volume > 2) return null;
 	return path.join(config.volumes[volume], path.normalize(filename));
 }
 
-_private.info = function(p) {
-	return new Promise(function(resolve, reject) {
+_private.info = function (p) {
+	return new Promise(function (resolve, reject) {
 		var info = _private.parse(p);
 		if (info.volume < 0) return reject('Volume not found');
 
-		fs.stat(p, async function(err, stat) {
+		fs.stat(p, async function (err, stat) {
 			if (err) return reject(err);
 			var r = {
 				name: path.basename(p),
@@ -944,21 +1032,21 @@ _private.info = function(p) {
 			if (r.mime && r.mime.indexOf('image/') == 0) {
 				var filename = _private.encode(p);
 				var tmbPath = path.join(config.tmbroot, filename + ".png");
-				try{
+				try {
 					if (await fs.exists(tmbPath)) {
 						r.tmb = filename + '.png';
 					} else {
 						r.tmb = "1";
 					}
 				}
-				catch(e){
+				catch (e) {
 					console.error(e)
 				}
 			}
 
 			if (!info.isRoot) {
-                var parent = path.dirname(p);
-                // if (parent == root) parent = parent + path.sep;
+				var parent = path.dirname(p);
+				// if (parent == root) parent = parent + path.sep;
 				r.phash = _private.encode(parent);
 			} else {
 				r.options = {
@@ -981,35 +1069,35 @@ _private.info = function(p) {
 			r.locked = acl.locked;
 			//check if this folder has child.
 			r.isdir = (r.mime == 'directory');
-            try{
-                if (r.isdir) {
-                    var items = await fs.readdir(p);
-                    for (var i = 0; i < items.length; i++) {
-                        if ((await fs.lstat(path.join(p, items[i]))).isDirectory()) {
-                            r.dirs = 1;
-                            break;
-                        }
-                    }
-                }
-                resolve(r);
-            }
-            catch(e){
-                reject(e)
-            }
-	
+			try {
+				if (r.isdir) {
+					var items = await fs.readdir(p);
+					for (var i = 0; i < items.length; i++) {
+						if ((await fs.lstat(path.join(p, items[i]))).isDirectory()) {
+							r.dirs = 1;
+							break;
+						}
+					}
+				}
+				resolve(r);
+			}
+			catch (e) {
+				reject(e)
+			}
+
 		})
 	})
 }
 
-_private.init = function() {
+_private.init = function () {
 	var tasks = [];
-	each(config.volumes, function(volume) {
+	each(config.volumes, function (volume) {
 		tasks.push(_private.info(volume));
 	})
 
 	return Promise.all(tasks)
-		.then(function(results) {
-			each(results, function(result) {
+		.then(function (results) {
+			each(results, function (result) {
 				result.phash = '';
 			})
 			return Promise.resolve(results);
@@ -1017,7 +1105,7 @@ _private.init = function() {
 }
 
 //Used by _private.encode & _private.info
-_private.parse = function(p) {
+_private.parse = function (p) {
 	var v = _private.volume(p);
 	var root = config.volumes[v] || "";
 	var relative = p.substr(root.length, p.length - root.length);
@@ -1033,13 +1121,13 @@ _private.parse = function(p) {
 /**
  * dir: absolute path
  */
-_private.readdir = function(dir) {
-	return new Promise(function(resolve, reject) {
+_private.readdir = function (dir) {
+	return new Promise(function (resolve, reject) {
 		var current;
-		fs.readdir(dir, async function(err, items) {
+		fs.readdir(dir, async function (err, items) {
 			if (err) return reject(err);
 			var files = [];
-			for(let item of items){
+			for (let item of items) {
 				var info = await fs.lstat(path.join(dir, item));
 				files.push({
 					name: item,
@@ -1051,18 +1139,18 @@ _private.readdir = function(dir) {
 	})
 }
 
-_private.suffix = function(name, suff) {
+_private.suffix = function (name, suff) {
 	var ext = path.extname(name);
 	var fil = path.basename(name, ext);
 	return fil + suff + ext;
 }
 
-_private.tmbfile = function(filename) {
+_private.tmbfile = function (filename) {
 	return path.join(config.tmbroot, filename);
 }
 
 //Used by _private.parse & config.acl
-_private.volume = function(p) {
+_private.volume = function (p) {
 	for (var i = 0; i < config.volumes.length; i++) {
 		if (i > 9) return -1;
 		if (p.indexOf(config.volumes[i]) == 0) {
