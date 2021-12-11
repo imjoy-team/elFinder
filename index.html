@@ -13,14 +13,15 @@
 		<!-- Rename "main.default.js" to "main.js" and edit it if you need configure elFInder options or any things -->
 		<script data-main="./main.default.js" src="//cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
 		<script>
+			window.initializeServiceWorker();
 			define('elFinderConfig', {
 				// elFinder options (REQUIRED)
 				// Documentation for client options:
 				// https://github.com/Studio-42/elFinder/wiki/Client-configuration-options
 				defaultOpts : {
-					url : '/connector', // or connector.maximal.php : connector URL (REQUIRED)
+					url : '/fs/connector', // or connector.maximal.php : connector URL (REQUIRED)
 					height: '100%',
-					transport : new elFinderSupportBrowserFs(),
+					// transport : new elFinderSupportBrowserFs(),
 					theme: 'default',
 					themes: {
 						'dark-slim': 'https://johnfort.github.io/elFinder.themes/dark-slim/manifest.json',
