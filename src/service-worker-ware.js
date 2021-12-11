@@ -1,15 +1,8 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var sww = require('./lib/sww.js');
 
-self.ServiceWorkerWare = sww.ServiceWorkerWare;
-self.StaticCacher = sww.StaticCacher;
-self.SimpleOfflineCache = sww.SimpleOfflineCache;
-
-},{"./lib/sww.js":5}],2:[function(require,module,exports){
-'use strict';
+const debug = function () { }
 
 // Inspired by expressjs and shed (https://github.com/wibblymat/shed)
-function Router(options) {
+export function Router(options) {
   this.options = options;
   this.stack = [];
 }
@@ -46,16 +39,16 @@ Router.prototype.add = function r_add(method, path, handler, label) {
 /**
  * Create the utility methods .get .post ... etc.
  */
-Router.prototype.methods.forEach(function(method) {
-  Router.prototype[method] = function(path, handler, label) {
+Router.prototype.methods.forEach(function (method) {
+  Router.prototype[method] = function (path, handler, label) {
     return this.add(method, path, handler, label);
   };
 });
 
 Router.prototype.proxyMethods = function r_proxyPrototype(obj) {
   var self = this;
-  this.methods.forEach(function(method) {
-    obj[method] = function(path, mw, label) {
+  this.methods.forEach(function (method) {
+    obj[method] = function (path, mw, label) {
       if (typeof mw.onFetch !== 'function' && typeof mw !== 'function') {
         throw new Error('This middleware cannot handle fetch request');
       }
@@ -117,7 +110,7 @@ Router.prototype._mapParameters = function (groups, placeholderNames) {
   }, Object.create(null));
 };
 
-Router.prototype._sanitizeMethod = function(method) {
+Router.prototype._sanitizeMethod = function (method) {
   var sanitizedMethod = method.toLowerCase().trim();
   if (this.methods.indexOf(sanitizedMethod) === -1) {
     throw new Error('Method "' + method + '" is not supported');
@@ -131,8 +124,8 @@ Router.prototype._sanitizeMethod = function(method) {
  * the stack.
  */
 Router.prototype.remove = function r_match(tag) {
-  for(let i=0; i< this.stack.length; i++){
-    if(tag && this.stack[i].tag === tag)
+  for (let i = 0; i < this.stack.length; i++) {
+    if (tag && this.stack[i].tag === tag)
       this.stack.splice(i, 1)
   }
 };
@@ -142,7 +135,7 @@ Router.prototype.remove = function r_match(tag) {
  * Simple path-to-regex translation based on the Express "string-based path"
  * syntax.
  */
-Router.prototype._parseSimplePath = function(path) {
+Router.prototype._parseSimplePath = function (path) {
   // Check for named placeholder crowding
   if (/\:[a-zA-Z0-9]+\:[a-zA-Z0-9]+/g.test(path)) {
     throw new Error('Invalid usage of named placeholders');
@@ -151,15 +144,15 @@ Router.prototype._parseSimplePath = function(path) {
   // Check for mixed placeholder crowdings
   var mixedPlaceHolders =
     /(\*\:[a-zA-Z0-9]+)|(\:[a-zA-Z0-9]+\:[a-zA-Z0-9]+)|(\:[a-zA-Z0-9]+\*)/g;
-  if (mixedPlaceHolders.test(path.replace(/\\\*/g,''))) {
+  if (mixedPlaceHolders.test(path.replace(/\\\*/g, ''))) {
     throw new Error('Invalid usage of named placeholders');
   }
 
   // Try parsing the string and converting special characters into regex
   try {
     // Parsing anonymous placeholders with simple backslash-escapes
-    path = path.replace(/(.|^)[*]+/g, function(m,escape) {
-      return escape==='\\' ? '\\*' : (escape+'(?:.*?)');
+    path = path.replace(/(.|^)[*]+/g, function (m, escape) {
+      return escape === '\\' ? '\\*' : (escape + '(?:.*?)');
     });
 
     // Parsing named placeholders with backslash-escapes
@@ -179,15 +172,6 @@ Router.prototype._parseSimplePath = function(path) {
   }
 };
 
-
-module.exports = Router;
-
-},{}],3:[function(require,module,exports){
-/* global Promise, caches */
-'use strict';
-
-var debug = 0 ? console.log.bind(console, '[SimpleOfflineCache]') :
- function(){};
 
 // Default Match options, not exposed.
 var DEFAULT_MATCH_OPTIONS = {
@@ -212,7 +196,7 @@ var DEFAULT_CACHE_NAME = 'offline';
  * @param {string} [missPolicy] Name of the policy to follow if a request miss
  *                 when hitting the cache.
  */
-function SimpleOfflineCache(cacheName, options, missPolicy) {
+export function SimpleOfflineCache(cacheName, options, missPolicy) {
   this.cacheName = cacheName || DEFAULT_CACHE_NAME;
   this.options = options || DEFAULT_MATCH_OPTIONS;
   this.missPolicy = missPolicy || DEFAULT_MISS_POLICY;
@@ -232,14 +216,14 @@ SimpleOfflineCache.prototype.onFetch = function soc_onFetch(request, response) {
   var clone = request.clone();
   var _this = this;
   debug('Handing fetch event: ' + clone.url);
-  return this.ensureCache().then(function(cache) {
-    return cache.match(clone, _this.options).then(function(res) {
+  return this.ensureCache().then(function (cache) {
+    return cache.match(clone, _this.options).then(function (res) {
       if (res) {
         return res;
       }
 
       // So far we just support one policy
-      switch(_this.missPolicy) {
+      switch (_this.missPolicy) {
         case DEFAULT_MISS_POLICY:
           return fetch(request);
       }
@@ -255,13 +239,8 @@ SimpleOfflineCache.prototype.ensureCache = function soc_ensureCache() {
 };
 
 
-module.exports = SimpleOfflineCache;
 
-},{}],4:[function(require,module,exports){
-/* globals caches, Promise, Request */
-'use strict';
-
-function StaticCacher(fileList) {
+export function StaticCacher(fileList) {
   if (!Array.isArray(fileList) || fileList.length === 0) {
     throw new Error('Invalid file list');
   }
@@ -270,7 +249,7 @@ function StaticCacher(fileList) {
 
 StaticCacher.prototype.onInstall = function sc_onInstall() {
   var self = this;
-  return this.getDefaultCache().then(function(cache) {
+  return this.getDefaultCache().then(function (cache) {
     return self.addAll(cache, self.files);
   });
 };
@@ -282,7 +261,7 @@ StaticCacher.prototype.getDefaultCache = function sc_getDefaultCache() {
   return this.cacheRequest;
 };
 
-StaticCacher.prototype.addAll = function(cache, urls) {
+StaticCacher.prototype.addAll = function (cache, urls) {
   if (!cache) {
     throw new Error('Need a cache to store things');
   }
@@ -293,7 +272,7 @@ StaticCacher.prototype.addAll = function(cache, urls) {
 
   var promises = [];
   var self = this;
-  urls.forEach(function(url) {
+  urls.forEach(function (url) {
     promises.push(self.fetchAndCache(new Request(url), cache));
   });
 
@@ -301,28 +280,16 @@ StaticCacher.prototype.addAll = function(cache, urls) {
 };
 
 StaticCacher.prototype.fetchAndCache =
-function sc_fetchAndCache(request, cache) {
+  function sc_fetchAndCache(request, cache) {
 
-  return fetch(request.clone()).then(function(response) {
-    if (parseInt(response.status) < 400) {
-      cache.put(request.clone(), response.clone());
-    }
-    return response;
-  });
-};
+    return fetch(request.clone()).then(function (response) {
+      if (parseInt(response.status) < 400) {
+        cache.put(request.clone(), response.clone());
+      }
+      return response;
+    });
+  };
 
-
-module.exports = StaticCacher;
-
-},{}],5:[function(require,module,exports){
-/* global fetch, BroadcastChannel, clients, Promise, Request, Response */
-'use strict';
-
-var debug = 0 ? console.log.bind(console, '[ServiceWorkerWare]') : function(){};
-
-var StaticCacher = require('./staticcacher.js');
-var SimpleOfflineCache = require('./simpleofflinecache.js');
-var Router = require('./router.js');
 
 var ERROR = 'error';
 var CONTINUE = 'continue';
@@ -333,7 +300,7 @@ function DEFAULT_FALLBACK_MW(request) {
   return fetch(request);
 }
 
-function ServiceWorkerWare(options) {
+export function ServiceWorkerWare(options) {
   options = options || {};
   if (typeof options === 'function' || options.onFetch) {
     options = { fallbackMiddleware: options };
@@ -372,7 +339,7 @@ ServiceWorkerWare.prototype.init = function sww_init() {
 ServiceWorkerWare.prototype.handleEvent = function sww_handleEvent(evt) {
 
   debug('Event received: ' + evt.type);
-  switch(evt.type) {
+  switch (evt.type) {
     case 'install':
       this.onInstall(evt);
       break;
@@ -399,7 +366,7 @@ ServiceWorkerWare.prototype.onFetch = function sww_onFetch(evt) {
   // Push the fallback middleware at the end of the list.
   // XXX bug 1165860: Decorating fallback MW with `stopIfResponse` until
   // 1165860 lands
-  steps.push((function(req, res) {
+  steps.push((function (req, res) {
     if (res) {
       return Promise.resolve(res);
     }
@@ -444,34 +411,34 @@ ServiceWorkerWare.prototype.executeMiddleware = function (middleware, request) {
  * @param {Response} the response for the middleware.
  */
 ServiceWorkerWare.prototype.runMiddleware =
-function (middleware, current, request, response) {
-  if (current >= middleware.length) {
-    return Promise.resolve(response);
-  }
-
-  var mw = middleware[current];
-  if (request) { request.parameters = mw.__params; }
-  var endWith = ServiceWorkerWare.endWith;
-  var answer = mw(request, response, endWith);
-  var normalized =
-    ServiceWorkerWare.normalizeMwAnswer(answer, request, response);
-
-  return normalized.then(function (info) {
-    switch (info.nextAction) {
-      case TERMINATE:
-        return Promise.resolve(info.response);
-
-      case ERROR:
-        return Promise.reject(info.error);
-
-      case CONTINUE:
-        var next = current + 1;
-        var request = info.request;
-        var response = info.response;
-        return this.runMiddleware(middleware, next, request, response);
+  function (middleware, current, request, response) {
+    if (current >= middleware.length) {
+      return Promise.resolve(response);
     }
-  }.bind(this));
-};
+
+    var mw = middleware[current];
+    if (request) { request.parameters = mw.__params; }
+    var endWith = ServiceWorkerWare.endWith;
+    var answer = mw(request, response, endWith);
+    var normalized =
+      ServiceWorkerWare.normalizeMwAnswer(answer, request, response);
+
+    return normalized.then(function (info) {
+      switch (info.nextAction) {
+        case TERMINATE:
+          return Promise.resolve(info.response);
+
+        case ERROR:
+          return Promise.reject(info.error);
+
+        case CONTINUE:
+          var next = current + 1;
+          var request = info.request;
+          var response = info.response;
+          return this.runMiddleware(middleware, next, request, response);
+      }
+    }.bind(this));
+  };
 
 /**
  * A function to force interruption of the pipeline.
@@ -536,8 +503,8 @@ ServiceWorkerWare.normalizeMwAnswer = function (answer, request, response) {
     }
     else {
       var msg = 'Type error: middleware must return a Response, ' +
-                'a Request, a pair [Response, Request] or a Promise ' +
-                'resolving to one of these types.';
+        'a Request, a pair [Response, Request] or a Promise ' +
+        'resolving to one of these types.';
       nextAction = ERROR;
       error = new Error(msg);
     }
@@ -582,15 +549,15 @@ ServiceWorkerWare.prototype.onActivate = function sww_activate(evt) {
  * @param {Promise} a promise resolving once all the results have been gathered.
  */
 ServiceWorkerWare.prototype.getFromMiddleware =
-function sww_getFromMiddleware(method) {
-  var tasks = this.middleware.reduce(function (tasks, mw) {
-    if (typeof mw[method] === 'function') {
-      tasks.push(mw[method]());
-    }
-    return tasks;
-  }, []);
-  return Promise.all(tasks);
-};
+  function sww_getFromMiddleware(method) {
+    var tasks = this.middleware.reduce(function (tasks, mw) {
+      if (typeof mw[method] === 'function') {
+        tasks.push(mw[method]());
+      }
+      return tasks;
+    }, []);
+    return Promise.all(tasks);
+  };
 
 /**
  * Register a new middleware layer, they will treat the request in
@@ -650,10 +617,10 @@ ServiceWorkerWare.prototype.use = function sww_use() {
  * handler
  */
 ServiceWorkerWare.prototype.forwardEvent = function sww_forwardEvent(evt) {
-  this.middleware.forEach(function(mw) {
+  this.middleware.forEach(function (mw) {
     var handlerName = 'on' + evt.type.replace(/^[a-z]/,
-      function(m){
-         return m.toUpperCase();
+      function (m) {
+        return m.toUpperCase();
       }
     );
     if (typeof mw[handlerName] !== 'undefined') {
@@ -681,8 +648,8 @@ ServiceWorkerWare.prototype.broadcastMessage = function sww_broadcastMessage(
   } else {
     // This is suppose to be the way of broadcasting a message, unfortunately
     // it's not working yet in Chrome Canary
-    return clients.matchAll().then(function(consumers) {
-      consumers.forEach(function(client) {
+    return clients.matchAll().then(function (consumers) {
+      consumers.forEach(function (client) {
         client.postMessage(msg);
       });
     });
@@ -717,10 +684,3 @@ ServiceWorkerWare.prototype.remove = function sww_remove(label) {
   return this.router.remove(label)
 };
 
-module.exports = {
-  ServiceWorkerWare: ServiceWorkerWare,
-  StaticCacher: StaticCacher,
-  SimpleOfflineCache: SimpleOfflineCache
-};
-
-},{"./router.js":2,"./simpleofflinecache.js":3,"./staticcacher.js":4}]},{},[1]);

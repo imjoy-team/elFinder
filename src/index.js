@@ -9,7 +9,7 @@
  *
  * @author Wei Ouyang
  **/
-import { api as elfinder_api } from './api.js';
+
 
 function guidGenerator() {
     var S4 = function() {
@@ -23,9 +23,8 @@ if(baseURL.endsWith('.html')){
 	const tmp = baseURL.split('/')
 	baseURL = tmp.slice(0, tmp.length-1).join('/') + '/'
 }
-const clientId = guidGenerator()
-const CONNECTOR_URL = '/connector'
-function initializeServiceWorker(){
+
+window.initializeServiceWorker = function(){
 	if ('serviceWorker' in navigator) {
 		// Register the worker and show the list of quotations.
 		if (!navigator.serviceWorker.controller) {
@@ -33,10 +32,8 @@ function initializeServiceWorker(){
 				this.controller.onstatechange = function() {
 					if (this.state === 'activated') {
 						console.log('Service worker successfully activated.')
-						setupCommunication();
 					}
 				};
-				setupCommunication();
 			};
 			navigator.serviceWorker.register(baseURL + 'service-worker.js').then(function(registration) {
 				console.log('Service worker successfully registered, scope is:', registration.scope);
@@ -47,34 +44,11 @@ function initializeServiceWorker(){
 		}
 		else{
 			console.log('Service worker was activated.')
-			setupCommunication()
 		}
 	} else {
 		console.log('Service workers are not supported.');
 	}
 }
-
-
-const routes = [
-	{path: `${baseURL}${clientId}/:route`, type: 'get'},
-	{path: `${baseURL}${clientId}/:route`, type: 'post'}
-]
-
-elfinder_api.config.roots = [
-{
-    url: `${baseURL}${clientId}/home/`,       //Required
-    path: "/home",   //Required
-    permissions: { read:1, write: 1, lock: 0 }
-},
-{
-    url: `${baseURL}${clientId}/tmp/`,   //Required
-    path: "/tmp",   //Required
-    permissions: { read:1, write: 1, lock: 0 }
-}]
-
-elfinder_api.config.volumes = elfinder_api.config.roots.map( (r)=>r.path );
-elfinder_api.config.tmbroot = '/tmp/.tmb';
-elfinder_api.config.tmburl = `${baseURL}${clientId}/tmp/.tmb/`;
 
 function decodeQuery(param){
 	param = new URLSearchParams(param)
@@ -95,139 +69,6 @@ function decodeQuery(param){
 		}
 	}
 	return opts
-}
-
-function handleFile({filePath, offset, length}){
-	return new Promise((resolve, reject)=>{
-		elfinder_api.fs.open(filePath, 'r', function(e, fd) {
-			if(e){
-				reject(e)
-				return
-			}
-			const output = new Uint8Array(length);
-			elfinder_api.fs.read(fd, output, 0, length, offset, function(e, bytesRead, output) {
-				if(e){
-					reject(e)
-					return
-				}
-				resolve(output)
-			});
-		});
-	})
-}
-
-async function handleRequest(request){
-	let path;
-	if(request.route.path === `${baseURL}${clientId}/:route`){
-		const route = decodeURIComponent('/' + request.parameters.route)
-		if(route.startsWith('/connector')){
-			let opts;
-			if(request.body){
-				opts = decodeQuery(request.body)
-			}
-			else{
-				opts = decodeQuery(route.split('?')[1])
-			}
-			// convert `targets[]` to `target`
-			for(let k of Object.keys(opts)){
-				if(k.endsWith('[]')){
-					opts[k.slice(0, k.length-2)] = opts[k]
-					delete opts[k]
-				}
-			}
-
-			try{
-				if(opts.cmd ==='file'){
-					return await elfinder_api.file(opts)
-				}
-				else if(opts.cmd ==='put'){
-					const response = await elfinder_api.put(opts)
-					return {body: JSON.stringify(response), status: 200}
-				}
-				else{
-					return {body: JSON.stringify(await api[opts.cmd](opts)), status: 200}
-				}
-			}
-			catch(e){
-				console.error(e)
-				return {error: `${e}`}
-			}
-		}
-		else{
-			path = `${route.split('?')[0]}`
-		}
-	}
-
-	if(path){
-		try{
-			const bytes = await elfinder_api.fs.readFile(path)
-			const file = new File([bytes.buffer], elfinder_api.path.basename(path), {
-				type: elfinder_api.mime.getType(path) || 'application/octet-stream',
-			});
-			return {body: file, status: 200}
-		}
-		catch(e){
-			console.error(e)
-			return {error: `${e}`}
-		}
-	}
-	return {error: 'Not found', status: 404}
-}
-
-function setupCommunication(){
-	
-	const messageChannel = new MessageChannel();
-	// First we initialize the channel by sending
-	// the port to the Service Worker (this also
-	// transfers the ownership of the port)
-	navigator.serviceWorker.controller.postMessage({
-		type: 'INIT_PORT',
-		clientId,
-	}, [messageChannel.port2]);
-	// Listen to the requests
-	messageChannel.port1.onmessage = (event) => {
-		if(event.data.type === 'REQUEST' && event.data.clientId ===clientId ){
-			const requestId = event.data.requestId
-			const request = event.data.request
-			if(request.filePath){
-				handleFile(request).then((response)=>{
-					navigator.serviceWorker.controller.postMessage({
-						type: 'RESPONSE',
-						clientId,
-						requestId,
-						response
-					});
-				})
-			}
-			else{
-				handleRequest(request).then((response)=>{
-					navigator.serviceWorker.controller.postMessage({
-						type: 'RESPONSE',
-						clientId,
-						requestId,
-						response
-					});
-				})
-			}
-			
-		}
-	};
-
-	navigator.serviceWorker.controller.postMessage({
-		type: 'REGISTER',
-		clientId,
-		routes
-	});
-
-	window.addEventListener("beforeunload", function (e) {
-		console.log('=======>DISPOSE_PORT')
-		debugger
-		navigator.serviceWorker.controller.postMessage({
-			type: 'DISPOSE_PORT',
-			clientId
-		});
-		return undefined;
-	});
 }
 
 window.setupImJoyApp = function(){
@@ -376,10 +217,11 @@ window.setupImJoyApp = function(){
 	})
 }
 
+
+const CONNECTOR_URL = '/fs/connector';
+
 window.elFinderSupportBrowserFs = function(upload) {
 	"use strict";
-	initializeServiceWorker();
-
 	this.parseFiles = function(fm, target, files){
 		const dfrd = $.Deferred();
 		files.done(function(result) { // result: [files, paths, renames, hashes, mkdirs]
@@ -496,11 +338,9 @@ window.elFinderSupportBrowserFs = function(upload) {
 	
 	this.init = function(fm) {
 		this.fm = fm;
-		this.fm.options.url = `${baseURL}${clientId}${CONNECTOR_URL}`;
+		this.fm.options.url = `${baseURL}${CONNECTOR_URL}`;
 	};
 
-	console.log(api)
-	
 	
 	this.send = function(opts) {
 		const dfrd = $.Deferred();
@@ -508,30 +348,20 @@ window.elFinderSupportBrowserFs = function(upload) {
 		
 		const query = decodeQuery(opts.url.split('?')[1])
 		if(query) Object.assign(opts.data, query)
-		const cmd = opts.data.cmd;
-		if(cmd === 'get' || cmd === 'file'){
-			const xhr = $.ajax(opts)
-			.fail(function(error) {
-				dfrd.reject(error);
-			})
-			.done(function(raw) {
-				dfrd.resolve(raw);
-			});
-			dfrd.abort = function() {
-				if (xhr && xhr.state() == 'pending') {
-					xhr.quiet = true;
-					xhr.abort();
-				}
-			};
-		}
-		else{
-			api[cmd](opts.data).then((result)=>{
-				dfrd.resolve(result);
-			}).catch((error)=>{
-				console.error(error)
-				dfrd.reject(error);
-			})
-		}
+		const xhr = $.ajax(opts)
+		.fail(function(error) {
+			dfrd.reject(error);
+		})
+		.done(function(raw) {
+			dfrd.resolve(raw);
+		});
+		dfrd.abort = function() {
+			if (xhr && xhr.state() == 'pending') {
+				xhr.quiet = true;
+				xhr.abort();
+			}
+		};
+
 		return dfrd;
 	};
 };

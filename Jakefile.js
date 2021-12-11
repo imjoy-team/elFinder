@@ -81,8 +81,7 @@ var dirmode = 0755,
 			[
 				path.join(src, 'js', 'proxy', 'elFinderSupportVer1.js'),
 				path.join(src, 'js', 'proxy', 'elFinderSupportBrowserFS.js'),
-				path.join(src, 'js', 'lib', 'service-worker.js'),
-				path.join(src, 'js', 'lib', 'ServiceWorkerWare.js'),
+				path.join(src, 'js', 'proxy', 'service-worker.js'),
 				path.join(src, 'Changelog'),
 				path.join(src, 'LICENSE.md'),
 				path.join(src, 'CNAME'),
@@ -99,8 +98,7 @@ var dirmode = 0755,
 			[
 				path.join(src, 'js', 'proxy', 'elFinderSupportVer1.js'),
 				path.join(src, 'js', 'proxy', 'elFinderSupportBrowserFS.js'),
-				path.join(src, 'js', 'lib', 'service-worker.js'),
-				path.join(src, 'js', 'lib', 'ServiceWorkerWare.js'),
+				path.join(src, 'js', 'proxy', 'service-worker.js'),
 				path.join(src, 'Changelog'),
 				path.join(src, 'LICENSE.md'),
 				path.join(src, 'README.md'),
@@ -238,7 +236,7 @@ task('prebuild', function(){
 
 desc('build elFinder');
 task({'elfinder': ['clean', 'prebuild', 'css/elfinder.min.css', 'js/elfinder.min.js', 'misc', 'js/extras', 'js/worker']}, function(){
-	copyFile('./js/lib/service-worker.js', './service-worker.js');
+	copyFile('./js/proxy/service-worker.js', './service-worker.js');
 	console.log('elFinder build done');
 });
 
