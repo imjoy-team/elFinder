@@ -52,6 +52,23 @@ function decodeQuery(param) {
   return opts
 }
 
+function normalizeRange(range, size) {
+  let [start, end] = range.replace(/bytes=/, "").split("-")
+  start = parseInt(start, 10);
+  end = end ? parseInt(end, 10) : (size - 1);
+  if (!isNaN(start) && isNaN(end)) {
+    end = size - 1;
+  }
+  if (isNaN(start) && !isNaN(end)) {
+    start = size - end;
+    end = size - 1;
+  }
+  if (start >= size || end >= size) {
+    throw new Error("Invalid range")
+  }
+  return { offset: start, length: end - start + 1 }
+}
+
 async function handleRequest(route, request) {
   if (route.path === `${baseURL}fs/:route`) {
     const route_path = decodeURIComponent('/' + request.parameters.route)
@@ -82,6 +99,7 @@ async function handleRequest(route, request) {
       console.log(opts)
       try {
         if (opts.cmd === 'file') {
+          opts.range = request.headers.range;
           return await elfinder_api.file(opts)
         }
         else {
@@ -97,12 +115,37 @@ async function handleRequest(route, request) {
     }
     else {
       const path = `${route_path.split('?')[0]}`
+      const range = request.headers.range;
       try {
-        const bytes = await elfinder_api.fs.readFile(path)
-        const file = new File([bytes.buffer], elfinder_api.path.basename(path), {
-          type: elfinder_api.mime.getType(path) || 'application/octet-stream',
-        });
-        return { body: file, status: 200 }
+        const contentType = elfinder_api.mime.getType(path) || 'application/octet-stream';
+        const size = (await elfinder_api.fs.lstat(path)).size;
+        if (range) {
+          const normalizedRange = normalizeRange(range, size)
+          const data = await handleFile({ filePath: path, offset: normalizedRange.start, length: normalizedRange.length })
+          const file = new File([data], elfinder_api.path.basename(path), {
+            type: contentType,
+          });
+          return {
+            body: file, headers: {
+              "Content-Range": `bytes ${start}-${end}/${size}`,
+              "Accept-Ranges": "bytes",
+              "Content-Length": end - start + 1,
+              "Content-Type": contentType
+            }, status: 206
+          }
+        }
+        else {
+          const bytes = await elfinder_api.fs.readFile(path)
+          const file = new File([bytes.buffer], elfinder_api.path.basename(path), {
+            type: contentType,
+          });
+          return {
+            body: file, headers: {
+              "Content-Type": contentType,
+              "Content-Length": size,
+            }, status: 200
+          }
+        }
       }
       catch (e) {
         console.error(e)
@@ -135,14 +178,23 @@ for (let route of routes) {
         }
         else {
           // we need `chunkSize`: chunk size, `size`: size of the file, `file`: file path
+          let range = response.range
+          if (range) {
+            range = normalizeRange(range, response.size)
+          }
           async function* generator() {
-            let offset = 0
-            while (offset < response.size) {
-              const length = Math.min(response.size - offset, response.chunkSize || 10240)
-              const data = await handleFile({ filePath: response.file, offset, length })
-              offset = offset + data.byteLength
+            let start = 0
+            let end = response.size - 1;
+            if (range) {
+              start = range.offset;
+              end = start + range.length - 1;
+            }
+            while (start <= end) {
+              const length = Math.min(end - start + 1, response.chunkSize || 10240)
+              const data = await handleFile({ filePath: response.file, start, length })
+              start = start + data.byteLength
               yield data
-              if (offset >= response.size) {
+              if (start > end) {
                 break;
               }
             }
@@ -158,6 +210,14 @@ for (let route of routes) {
               }
             },
           });
+          if (range) {
+            const start = range.offset;
+            const end = start + range.length - 1;
+            response.headers["Content-Range"] = `bytes ${start}-${end}/${response.size}`;
+            response.headers["Accept-Ranges"] = "bytes";
+            response.headers["Content-Length"] = range.length;
+            response.status = 206;
+          }
           return new Response(stream, { status: response.status || 200, statusText: response.statusText || 'OK', headers: response.headers || {} });
         }
       }

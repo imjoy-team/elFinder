@@ -362,15 +362,15 @@ api.file = async function (opts, res) {
 	const path = target.absolutePath;
 	const size = (await api.fs.lstat(path)).size
 	const mime = _private.getMime(path);
-	const headers = { 'content-type': mime }
+	const headers = { 'Content-Type': mime }
 	if (opts.download) {
-		headers['content-disposition'] = `attachments; filename="${target.name}"`
+		headers['Content-Disposition'] = `attachments; filename="${target.name}"`
 	}
 	else {
-		headers['content-disposition'] = 'inline'
+		headers['Content-Disposition'] = 'inline'
 	}
-	headers['content-length'] = `${size}`
-	return { file: path, size, chunkSize: config.chunkSize, headers }
+	if(!opts.range) headers["Content-Length"] = `${size}`
+	return { file: path, size, chunkSize: config.chunkSize, headers, range: opts.range }
 }
 
 api.get = function (opts, res) {
@@ -819,31 +819,26 @@ api.upload = function (opts, res) {
 				}
 				target.fileName = name;
 				tasks.push(writeFile(path.join(target.absolutePath, name), files[i], offset, 'a', opts.progress))
-				console.log("chunk written===>", name, offset, target.name, target.fileName)
 			}
 			else if (opts.chunk && !opts.range) {
 				target.fileName = opts.chunk;
-				console.log("chunk merged", opts.chunk, await fs.exists(path.join(target.absolutePath, target.fileName)))
 				tasks.push(fs.exists(path.join(target.absolutePath, target.fileName)))
 			}
 			else {
 				target.fileName = files[i].name;
 				tasks.push(writeFile(path.join(target.absolutePath, files[i].name), files[i], 0, 'w', opts.progress))
 			}
-			console.log("path ==>", path.join(target.absolutePath, target.fileName))
 		}
 		Promise.allSettled(tasks).then(async (values) => {
 			try {
 				// chunk merge request
 				if (!opts.range && opts.chunk) {
 					if (values[0]) {
-						console.log('========2222===>')
 						resolve({
 							added: [await _private.info(path.join(targets[0].absolutePath, targets[0].fileName))]
 						})
 					}
 					else {
-						console.log('========3333===>')
 						resolve({
 							added: [],
 							warning: "Failed to upload"
@@ -852,18 +847,16 @@ api.upload = function (opts, res) {
 				}
 				// chunking
 				else if (!_chunkmerged && opts.chunk) {
-					console.log('========11111===>')
 					resolve({
 						added: []
 					})
 				}
 				// last chunk
 				else if (_chunkmerged) {
-					console.log('========2222111111===>')
 					resolve({
 						_chunkmerged,
 						_name,
-						added: [await _private.info(path.join(targets[0].absolutePath, targets[0].fileName))],
+						added: [],
 					})
 				}
 				// no chunking, for small files
@@ -871,7 +864,6 @@ api.upload = function (opts, res) {
 					const added = []
 					for (let i = 0; i < values.length; i++) {
 						if (values[i].status === 'fulfilled') {
-							console.log("===added==>", targets[i].absolutePath, targets[i].fileName)
 							added.push(await _private.info(path.join(targets[i].absolutePath, targets[i].fileName)))
 						}
 					}
