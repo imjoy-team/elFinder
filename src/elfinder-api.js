@@ -794,12 +794,6 @@ api.upload = function (opts, res) {
 		const target = opts.target
 		const files = opts.upload
 		const paths = opts.upload_path
-		const renames = opts.renames
-		if (renames && renames.length === files.length) {
-			for (let i = 0; i < renames.length; i++) {
-				files[i].name = renames[i]
-			}
-		}
 		opts.targets = (paths && paths.length === files.length && paths) || files.map(() => target)
 		const tasks = [];
 		const targets = []
@@ -826,8 +820,8 @@ api.upload = function (opts, res) {
 				tasks.push(fs.exists(path.join(target.absolutePath, target.fileName)))
 			}
 			else {
-				target.fileName = files[i].name;
-				tasks.push(writeFile(path.join(target.absolutePath, files[i].name), files[i], 0, 'w', opts.progress))
+				target.fileName = path.basename(files[i].name);
+				tasks.push(writeFile(path.join(target.absolutePath, target.fileName), files[i], 0, 'w', opts.progress))
 			}
 		}
 		Promise.allSettled(tasks).then(async (values) => {
