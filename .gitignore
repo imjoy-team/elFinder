@@ -1,5 +1,4 @@
-js/proxy/elFinderSupportBrowserFS.*
-js/proxy/service-worker.js
+js/proxy/*
 *~
 ._*
 _*

@@ -135,8 +135,6 @@ async function initialize(baseURL) {
 	})
 }
 
-export const api = { mime, config, initialize };
-
 function parseFile(file, chunk_callback) {
 	return new Promise((resolve, reject) => {
 		var fileSize = file.size;
@@ -204,6 +202,8 @@ async function writeFile(path, file, writeOffset, mode, progressCallback) {
 		throw e
 	}
 }
+
+export const api = { mime, config, initialize };
 
 api.archive = function (opts, res) {
 	return new Promise(function (resolve, reject) {
@@ -310,12 +310,12 @@ api.put = async function (opts, res) {
 	try {
 		var target = _private.decode(opts.target);
 		if (opts.encoding === 'scheme') {
-			await writeFile(target.absolutePath, await urlToFile(opts.content, target.name, mime.getType(target.absolutePath)))
+			await writeFile(target.absolutePath, await urlToFile(opts.content, target.name, _private.getMime(target.absolutePath)))
 		}
 		else {
 			await fs.writeFile(target.absolutePath, opts.content, { encoding: opts.encoding || 'utf8' });
 		}
-		if (mime.getType(target.absolutePath).startsWith('image/')) {
+		if (_private.getMime(target.absolutePath).startsWith('image/')) {
 			await generateThumbnail(target.absolutePath)
 		}
 		return { changed: [await _private.info(target.absolutePath)] }
@@ -361,7 +361,7 @@ api.file = async function (opts, res) {
 	const target = _private.decode(opts.target);
 	const path = target.absolutePath;
 	const size = (await api.fs.lstat(path)).size
-	const mime = api.mime.getType(path) || 'application/octet-stream'
+	const mime = _private.getMime(path);
 	const headers = { 'content-type': mime }
 	if (opts.download) {
 		headers['content-disposition'] = `attachments; filename="${target.name}"`
@@ -463,7 +463,7 @@ api.open = async function (opts, res) {
 		uiCmdMap: [],
 		tmbUrl: config.tmburl
 	}
-	const _init = opts.init && opts.init == true;
+	const _init = opts.init === "1" || opts.reload === "1";
 	let _target = opts.target;
 
 	if (_init) {
@@ -695,7 +695,7 @@ api.search = function (opts, res) {
 
 async function saveImage(img, path) {
 	return new Promise((resolve, reject) => {
-		img.getBase64(mime.getType(path), async (err, res) => {
+		img.getBase64(_private.getMime(path), async (err, res) => {
 			try {
 				if (err) {
 					reject(err)
@@ -727,7 +727,7 @@ api.tmb = function (opts, res) {
 			var dir = _private.decode(opts.current);
 			var items = await fs.readdir(dir.absolutePath);
 			each(items, function (item) {
-				var _m = mime.getType(item);
+				var _m = _private.getMime(item);
 				if (_m !== false && _m.indexOf('image/') == 0) {
 					files.push(path.join(dir.absolutePath, item));
 				}
@@ -919,6 +919,9 @@ api.zipdl = function (opts, res) {
 	})
 }
 
+_private.getMime = function (path){
+	return mime.getType(path) || "application/octet-stream";
+}
 
 _private.move = function (opts, res) {
 	return new Promise(async function (resolve, reject) {
@@ -1022,12 +1025,9 @@ _private.info = function (p) {
 				name: path.basename(p),
 				size: stat.size,
 				hash: _private.encode(p),
-				mime: stat.isDirectory() ? 'directory' : mime.getType(p),
+				mime: stat.isDirectory() ? 'directory' : _private.getMime(p),
 				ts: Math.floor(stat.mtime.getTime() / 1000),
 				volumeid: 'v' + info.volume + '_'
-			}
-			if (r.mime === false) {
-				r.mime = 'application/binary';
 			}
 			if (r.mime && r.mime.indexOf('image/') == 0) {
 				var filename = _private.encode(p);

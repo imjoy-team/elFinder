@@ -1,7 +1,7 @@
 /* eslint no-unused-vars: 0 */
 /* global importScripts, ServiceWorkerWare */
 import { ServiceWorkerWare } from "./service-worker-ware.js"
-import { api as elfinder_api } from './api.js';
+import { api as elfinder_api } from './elfinder-api.js';
 
 const baseURL = (function () {
   var tokens = (self.location + '').split('/');
@@ -31,25 +31,25 @@ function handleFile({ filePath, offset, length }) {
   })
 }
 
-function decodeQuery(param){
-	param = new URLSearchParams(param)
-	const opts = {}
-	for(let p of Array.from(param.entries())){
-		if(opts[p[0]]){
-			if(!Array.isArray(opts[p[0]]))
-				opts[p[0]] = [opts[p[0]], p[1]]
-			else{
-				opts[p[0]].push(p[1])
-			}
-		}
-		else{
-			if(p[0].endsWith('[]'))
-				opts[p[0]] = [p[1]]
-			else
-				opts[p[0]] = p[1]
-		}
-	}
-	return opts
+function decodeQuery(param) {
+  param = new URLSearchParams(param)
+  const opts = {}
+  for (let p of Array.from(param.entries())) {
+    if (opts[p[0]]) {
+      if (!Array.isArray(opts[p[0]]))
+        opts[p[0]] = [opts[p[0]], p[1]]
+      else {
+        opts[p[0]].push(p[1])
+      }
+    }
+    else {
+      if (p[0].endsWith('[]'))
+        opts[p[0]] = [p[1]]
+      else
+        opts[p[0]] = p[1]
+    }
+  }
+  return opts
 }
 
 async function handleRequest(route, request) {
@@ -57,21 +57,21 @@ async function handleRequest(route, request) {
     const route_path = decodeURIComponent('/' + request.parameters.route)
     if (route_path.startsWith('/connector')) {
       let opts = decodeQuery(route_path.split('?')[1])
-      if(route.type === 'post'){
+      if (route.type === 'post') {
         const formData = await request.formData()
-        for(let key of formData.keys()){
-          if(key.endsWith('[]'))
+        for (let key of formData.keys()) {
+          if (key.endsWith('[]'))
             opts[key] = formData.getAll(key)
           else
             opts[key] = formData.get(key)
         }
         opts.cmd = "upload"
       }
-      else if (Object.keys(opts).length ===0) {
+      else if (Object.keys(opts).length === 0) {
         const body = await request.text()
         opts = decodeQuery(body)
       }
-      
+
       // convert `targets[]` to `target`
       for (let k of Object.keys(opts)) {
         if (k.endsWith('[]')) {
@@ -124,7 +124,7 @@ const routes = [
 for (let route of routes) {
   worker[route.type](route.path, async function (req) {
     try {
-      
+
       const response = await handleRequest(route, req)
       if (response.error) {
         return new Response(`${response.error}`, { status: response.status || 500, statusText: response.statusText || 'ERROR' })
@@ -186,4 +186,4 @@ self.addEventListener('activate', function (event) {
   event.waitUntil(self.clients.claim()); // Become available to all pages
 });
 
-console.log("In-browser proxy server is running ")
+console.log("Service worker file system is running ")
