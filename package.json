@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "browserfs": "^1.4.3",
+    "content-disposition": "^0.5.4",
     "jimp": "^0.16.1",
     "jszip": "^3.6.0",
     "lzutf8": "^0.6.0",

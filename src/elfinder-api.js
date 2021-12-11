@@ -4,6 +4,7 @@ import { intersection, each } from 'underscore';
 import Jimp from 'jimp/browser/lib/jimp';
 import lz from 'lzutf8';
 import JSZip from 'jszip';
+import contentDisposition from 'content-disposition';
 
 const ArrayBufferView = Object.getPrototypeOf(
 	Object.getPrototypeOf(new Uint8Array())
@@ -364,12 +365,12 @@ api.file = async function (opts, res) {
 	const mime = _private.getMime(path);
 	const headers = { 'Content-Type': mime }
 	if (opts.download) {
-		headers['Content-Disposition'] = `attachments; filename="${target.name}"`
+		headers['Content-Disposition'] = contentDisposition(target.name);
 	}
 	else {
 		headers['Content-Disposition'] = 'inline'
 	}
-	if(!opts.range) headers["Content-Length"] = `${size}`
+	if (!opts.range) headers["Content-Length"] = `${size}`
 	return { file: path, size, chunkSize: config.chunkSize, headers, range: opts.range }
 }
 
@@ -911,7 +912,7 @@ api.zipdl = function (opts, res) {
 	})
 }
 
-_private.getMime = function (path){
+_private.getMime = function (path) {
 	return mime.getType(path) || "application/octet-stream";
 }
 
