@@ -1,6 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const CopyPlugin = require("copy-webpack-plugin");
+const ServiceWorkerWebpackPlugin = require('serviceworker-webpack-plugin');
 
 module.exports = {
   entry: './src/index.js',
@@ -15,13 +16,14 @@ module.exports = {
     }),
     new CopyPlugin({
       patterns: [
-        { from: path.resolve(__dirname, 'src/service-worker.js'),
-          to: path.resolve(__dirname, 'js/lib/service-worker.js')
-        },
         { from: path.resolve(__dirname, 'src/ServiceWorkerWare.js'),
-          to: path.resolve(__dirname, 'js/lib/ServiceWorkerWare.js')
+          to: path.resolve(__dirname, 'js/proxy/ServiceWorkerWare.js')
         },
       ],
     }),
+    new ServiceWorkerWebpackPlugin({
+      entry: path.join(__dirname, 'src/service-worker.js'),
+      filename: 'service-worker.js'
+    })
   ]
 };

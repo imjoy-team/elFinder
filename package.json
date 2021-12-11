@@ -5,7 +5,7 @@
   "main": "Jakefile.js",
   "scripts": {
     "build": "npx webpack --config webpack.config.js --mode production && mkdir -p ./elfinder_client && jake -C ./elfinder_client elfinder",
-    "serve": "nodemon --ext html,js --ignore ./js/proxy --ignore ./js/lib --ignore ./elfinder_client --ignore ./node_modules --exec \"npx webpack --config webpack.config.js && jake -C ./elfinder_client serve\" --trace"
+    "serve": "nodemon --ext html,js --ignore ./js/proxy --ignore ./js/proxy --ignore ./elfinder_client --ignore ./node_modules --exec \"npx webpack --config webpack.config.js && jake -C ./elfinder_client serve\" --trace"
   },
   "repository": {
     "type": "git",
@@ -41,6 +41,7 @@
     "jszip": "^3.6.0",
     "lzutf8": "^0.6.0",
     "mime": "^2.5.2",
+    "serviceworker-webpack-plugin": "^1.0.1",
     "underscore": "^1.12.1"
   }
 }

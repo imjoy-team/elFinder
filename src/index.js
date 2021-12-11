@@ -145,7 +145,7 @@ async function handleRequest(request){
 					return {body: JSON.stringify(response), status: 200}
 				}
 				else{
-					return {body: JSON.stringify(await api[opts.cmd](opts)), status: 200}
+					return {body: JSON.stringify(await elfinder_api[opts.cmd](opts)), status: 200}
 				}
 			}
 			catch(e){
@@ -499,7 +499,7 @@ window.elFinderSupportBrowserFs = function(upload) {
 		this.fm.options.url = `${baseURL}${clientId}${CONNECTOR_URL}`;
 	};
 
-	console.log(api)
+	console.log(elfinder_api)
 	
 	
 	this.send = function(opts) {
@@ -525,7 +525,7 @@ window.elFinderSupportBrowserFs = function(upload) {
 			};
 		}
 		else{
-			api[cmd](opts.data).then((result)=>{
+			elfinder_api[cmd](opts.data).then((result)=>{
 				dfrd.resolve(result);
 			}).catch((error)=>{
 				console.error(error)
