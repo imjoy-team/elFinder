@@ -474,7 +474,7 @@ api.open = async function (opts, res) {
 		}
 	}
 	if (!_target) {
-		return reject('errCmdParams');
+		throw new Error('errCmdParams');
 	}
 	//NOTE target must always be directory
 	_target = _private.decode(_target);
