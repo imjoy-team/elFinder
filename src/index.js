@@ -9,7 +9,7 @@
  *
  * @author Wei Ouyang
  **/
-import {api} from './api.js';
+import { api as elfinder_api } from './api.js';
 
 function guidGenerator() {
     var S4 = function() {
@@ -36,12 +36,13 @@ function initializeServiceWorker(){
 						setupCommunication();
 					}
 				};
+				setupCommunication();
 			};
 			navigator.serviceWorker.register(baseURL + 'service-worker.js').then(function(registration) {
 				console.log('Service worker successfully registered, scope is:', registration.scope);
 			})
 			.catch(function(error) {
-				console.log('Service worker registration failed, error:', error);
+				console.error('Service worker registration failed, error:', error);
 			});
 		}
 		else{
@@ -59,7 +60,7 @@ const routes = [
 	{path: `${baseURL}${clientId}/:route`, type: 'post'}
 ]
 
-api.config.roots = [
+elfinder_api.config.roots = [
 {
     url: `${baseURL}${clientId}/home/`,       //Required
     path: "/home",   //Required
@@ -71,9 +72,9 @@ api.config.roots = [
     permissions: { read:1, write: 1, lock: 0 }
 }]
 
-api.config.volumes = api.config.roots.map( (r)=>r.path );
-api.config.tmbroot = '/tmp/.tmb';
-api.config.tmburl = `${baseURL}${clientId}/tmp/.tmb/`;
+elfinder_api.config.volumes = elfinder_api.config.roots.map( (r)=>r.path );
+elfinder_api.config.tmbroot = '/tmp/.tmb';
+elfinder_api.config.tmburl = `${baseURL}${clientId}/tmp/.tmb/`;
 
 function decodeQuery(param){
 	param = new URLSearchParams(param)
@@ -98,13 +99,13 @@ function decodeQuery(param){
 
 function handleFile({filePath, offset, length}){
 	return new Promise((resolve, reject)=>{
-		api.fs.open(filePath, 'r', function(e, fd) {
+		elfinder_api.fs.open(filePath, 'r', function(e, fd) {
 			if(e){
 				reject(e)
 				return
 			}
 			const output = new Uint8Array(length);
-			api.fs.read(fd, output, 0, length, offset, function(e, bytesRead, output) {
+			elfinder_api.fs.read(fd, output, 0, length, offset, function(e, bytesRead, output) {
 				if(e){
 					reject(e)
 					return
@@ -137,10 +138,10 @@ async function handleRequest(request){
 
 			try{
 				if(opts.cmd ==='file'){
-					return await api.file(opts)
+					return await elfinder_api.file(opts)
 				}
 				else if(opts.cmd ==='put'){
-					const response = await api.put(opts)
+					const response = await elfinder_api.put(opts)
 					return {body: JSON.stringify(response), status: 200}
 				}
 				else{
@@ -159,9 +160,9 @@ async function handleRequest(request){
 
 	if(path){
 		try{
-			const bytes = await api.fs.readFile(path)
-			const file = new File([bytes.buffer], api.path.basename(path), {
-				type: api.mime.getType(path) || 'application/octet-stream',
+			const bytes = await elfinder_api.fs.readFile(path)
+			const file = new File([bytes.buffer], elfinder_api.path.basename(path), {
+				type: elfinder_api.mime.getType(path) || 'application/octet-stream',
 			});
 			return {body: file, status: 200}
 		}
@@ -229,7 +230,151 @@ function setupCommunication(){
 	});
 }
 
+window.setupImJoyApp = function(){
+	const mainContainer = document.createElement('div');
+	document.getElementById('window-manager').appendChild(mainContainer)
+	// we need a hack here for some umd modules in the imjoy loader to load
+	const _define = window.define;
+	window.define = undefined
+	loadImJoyBasicApp({
+		version: '0.13.70',
+		process_url_query: true,
+		show_window_title: false,
+		show_progress_bar: true,
+		show_empty_window: true,
+		window_manager_container: 'window-manager',
+		menu_style: { position: "absolute", right: 0, top: "2px" },
+		window_style: {width: '100%', height: '100%'},
+		main_container: mainContainer,
+		imjoy_api: { } // override some imjoy API functions here
+	}).then(async app => {
+		const api = app.imjoy.api
+		const w = {
+			id: 'elfinder-window',
+			window_id: 'elfinder-window-container',
+			name: 'elFinder',
+			fullscreen: true
+		}
+		app.allWindows.push(w);
+		app.addWindow(w);
+		app.$forceUpdate();
+		setTimeout(()=>{
+			const elfinderContainer = document.getElementById(w.window_id)
+			elfinderContainer.appendChild(document.getElementById('elfinder'))
+		}, 0)
 
+		function urlToBase64(url){
+			return new Promise(async (resolve, reject)=>{
+				const response = await fetch(url)
+				const blob = await response.blob()
+				const reader = new FileReader() ;
+				reader.onload = function(){ resolve(this.result) } ;
+				reader.onerror = reject
+				reader.readAsDataURL(blob) ;
+			})
+		}
+		await api.registerService({
+			type: '#file-loader',
+			name: 'ITK/VTK Viewer',
+			async check(fileObj){
+				if(fileObj.mime.startsWith('image/tiff')){
+					return true
+				}
+			},
+			async load({url, window_id}){
+				console.log('https://kitware.github.io/itk-vtk-viewer/app/?fileToLoad='+url)
+				await api.createWindow({src: 'https://kitware.github.io/itk-vtk-viewer/app/?fileToLoad='+url, window_id})
+			}
+		})
+		await api.registerService({
+			type: '#file-loader',
+			name: 'Kaibu',
+			icon: 'https://kaibu.org/static/img/kaibu-icon.svg',
+			async check(fileObj){
+				if(fileObj.mime.startsWith('image/') || fileObj.mime === 'directory'){
+					return true
+				}
+			},
+			async load({source, type, window_id}){
+				if(type === 'file'){
+					const base64 = await urlToBase64(source.url)
+					const viewer = await api.createWindow({src: 'https://kaibu.org/', window_id, w: 10, h: 10})
+					await viewer.view_image(base64, {name: source.name});
+					await viewer.add_shapes([], {name: 'annotation'})
+				}
+				else if(type === 'directory'){
+					const viewer = await api.createWindow({src: 'https://kaibu.org/', window_id, w: 10, h: 10})
+					source = source.filter(file => file.mime.startsWith('image/'))
+					const nodes = source.map(file => {return {"title": file.name, "data": file, "isLeaf": true}})
+					await viewer.add_widget({
+						"_rintf": true,
+						"type": "tree",
+						"name": "Files",
+						"node_dbclick_callback": async (node)=>{
+							await viewer.clear_layers()
+							const file = node.data
+							const base64 = await urlToBase64(file.url)
+							await viewer.view_image(base64, {name: file.name})
+						},
+						"nodes": nodes,
+					})
+					await viewer.add_shapes([], {name: 'annotation'})
+				}
+
+			}
+		})
+		
+		// a demo content provider following the Jupyter Content Manager standard
+		// https://jupyter-notebook.readthedocs.io/en/stable/extending/contents.html#required-methods
+		await api.registerService({
+			type: '#content-provider',
+			name: 'MyData',
+			get(path){
+				return {
+					name: 'My Folder',
+					path: '/user',
+					type: 'directory',
+					created: '2021-01-23T18:25:43.511Z',
+					last_modified: '2021-01-23T18:25:43.511Z',
+					mimetype: null,
+					format: 'json',
+					content: [
+						{
+							name: 'My SubFolder',
+							path: '/user/me',
+							type: 'directory',
+							created: '2021-01-23T18:25:43.511Z',
+							last_modified: '2021-01-23T18:25:43.511Z',
+							mimetype: null,
+						}
+					]
+				}
+			},
+			save(model, path){
+
+			},
+			delete_file(path){
+
+			},
+			rename_file(old_path, new_path){
+
+			},
+			file_exists(path){
+
+			},
+			dir_exists(path){
+
+			},
+			is_hidden(path){
+
+			}
+		})
+		window.imjoy = app.imjoy;
+	}).finally(()=>{
+		// restore define
+		window.define = _define;
+	})
+}
 
 window.elFinderSupportBrowserFs = function(upload) {
 	"use strict";
@@ -309,7 +454,7 @@ window.elFinderSupportBrowserFs = function(upload) {
 			self.notify({type : 'upload', cnt : 0, progress, size : 0});
 		}
 		function saveFiles(opts){
-			api.upload(opts).then((data)=>{
+			elfinder_api.upload(opts).then((data)=>{
 				self.uploads.xhrUploading = false;
 				if (data) {
 					self.currentReqCmd = 'upload';
