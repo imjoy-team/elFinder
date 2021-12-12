@@ -83,7 +83,7 @@ async function handleRequest(route, request) {
           else
             opts[key] = formData.get(key)
         }
-        opts.cmd = "upload"
+        if(!opts.cmd) opts.cmd = "upload" // it can be put or upload
       }
       else if (Object.keys(opts).length === 0) {
         const body = await request.text()
