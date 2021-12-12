@@ -99,7 +99,7 @@ async function handleRequest(route, request) {
       console.log(opts)
       try {
         if (opts.cmd === 'file') {
-          opts.range = request.headers.range;
+          opts.range = request.headers.get("range")
           return await elfinder_api.file(opts)
         }
         else {
@@ -115,7 +115,7 @@ async function handleRequest(route, request) {
     }
     else {
       const path = `${route_path.split('?')[0]}`
-      const range = request.headers.range;
+      const range = request.headers.get("range");
       try {
         const contentType = elfinder_api.mime.getType(path) || 'application/octet-stream';
         const size = (await elfinder_api.fs.lstat(path)).size;
