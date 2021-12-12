@@ -2,6 +2,7 @@
 /* global importScripts, ServiceWorkerWare */
 import { ServiceWorkerWare } from "./service-worker-ware.js"
 import { api as elfinder_api } from './elfinder-api.js';
+import { version } from '../package.json';
 
 const baseURL = (function () {
   var tokens = (self.location + '').split('/');
@@ -246,4 +247,4 @@ self.addEventListener('activate', function (event) {
   event.waitUntil(self.clients.claim()); // Become available to all pages
 });
 
-console.log("Service worker file system is running ")
+console.log(`Service worker file system is running (${version})`)
