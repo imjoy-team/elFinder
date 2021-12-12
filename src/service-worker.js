@@ -67,7 +67,7 @@ function normalizeRange(range, size) {
   if (start >= size || end >= size) {
     throw new Error("Invalid range")
   }
-  return { offset: start, length: end - start + 1 }
+  return { offset: start, start, end, length: end - start + 1 }
 }
 
 async function handleRequest(route, request) {
@@ -122,15 +122,15 @@ async function handleRequest(route, request) {
         const size = (await elfinder_api.fs.lstat(path)).size;
         if (range) {
           const normalizedRange = normalizeRange(range, size)
-          const data = await handleFile({ filePath: path, offset: normalizedRange.start, length: normalizedRange.length })
+          const data = await handleFile({ filePath: path, offset: normalizedRange.offset, length: normalizedRange.length })
           const file = new File([data], elfinder_api.path.basename(path), {
             type: contentType,
           });
           return {
             body: file, headers: {
-              "Content-Range": `bytes ${start}-${end}/${size}`,
+              "Content-Range": `bytes ${normalizedRange.start}-${normalizedRange.end}/${size}`,
               "Accept-Ranges": "bytes",
-              "Content-Length": end - start + 1,
+              "Content-Length": normalizedRange.length,
               "Content-Type": contentType
             }, status: 206
           }
