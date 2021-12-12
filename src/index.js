@@ -35,7 +35,7 @@ window.initializeServiceWorker = function(){
 					}
 				};
 			};
-			navigator.serviceWorker.register(baseURL + 'service-worker.js').then(function(registration) {
+			navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
 				console.log('Service worker successfully registered, scope is:', registration.scope);
 			})
 			.catch(function(error) {
