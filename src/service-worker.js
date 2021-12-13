@@ -165,13 +165,17 @@ async function handleRequest(route, request) {
         for (let key of formData.keys()) {
             opts[key] = formData.get(key)
         }
-        if(!opts.overwrite && await elfinder_api.fs.exists(path)) {
-          return {body: "File already exists (pass `overwrite=true` to overwrite it)", status: 400}
+        const exists = await elfinder_api.fs.exists(path);
+        if(!opts.overwrite && !opts.append && exists) {
+          return {body: "File already exists (pass `overwrite=true` to overwrite it or set `append=true`)", status: 400}
         }
         if(!opts.file){
           return {body: "File key not found", status: 400}
         }
         try{
+          if(opts.overwrite && exists){
+            await elfinder_api.fs.unlink(path)
+          }
           if(opts.append){
             await parseFile(opts.file, (chunk, offset) => {
               return new Promise((resolve, reject) => {
