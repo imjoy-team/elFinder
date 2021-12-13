@@ -1014,7 +1014,8 @@ _private.info = function (p) {
 				hash: _private.encode(p),
 				mime: stat.isDirectory() ? 'directory' : _private.getMime(p),
 				ts: Math.floor(stat.mtime.getTime() / 1000),
-				volumeid: 'v' + info.volume + '_'
+				volumeid: 'v' + info.volume + '_',
+				path: p, // expose real path
 			}
 			if (r.mime && r.mime.indexOf('image/') == 0) {
 				var filename = _private.encode(p);
