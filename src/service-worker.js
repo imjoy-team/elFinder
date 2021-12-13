@@ -187,7 +187,7 @@ async function handleRequest(route, request) {
             })
           }
           else{
-            await writeFile(path, file, 0, 'w')
+            await writeFile(path, opts.file, 0, 'w')
           }
           return { body: JSON.stringify({success: true}), status: 200 }
         }
