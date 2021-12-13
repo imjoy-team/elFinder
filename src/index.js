@@ -72,8 +72,8 @@ function decodeQuery(param){
 }
 
 window.setupImJoyApp = function(){
-	const mainContainer = document.createElement('div');
-	document.getElementById('window-manager').appendChild(mainContainer)
+	// const mainContainer = document.createElement('div');
+	// document.getElementById('window-manager').appendChild(mainContainer)
 	// we need a hack here for some umd modules in the imjoy loader to load
 	const _define = window.define;
 	window.define = undefined
@@ -83,26 +83,26 @@ window.setupImJoyApp = function(){
 		show_window_title: false,
 		show_progress_bar: true,
 		show_empty_window: true,
-		window_manager_container: 'window-manager',
+		// window_manager_container: 'window-manager',
 		menu_style: { position: "absolute", right: 0, top: "2px" },
 		window_style: {width: '100%', height: '100%'},
-		main_container: mainContainer,
+		// main_container: mainContainer,
 		imjoy_api: { } // override some imjoy API functions here
 	}).then(async app => {
 		const api = app.imjoy.api
-		const w = {
-			id: 'elfinder-window',
-			window_id: 'elfinder-window-container',
-			name: 'elFinder',
-			fullscreen: true
-		}
-		app.allWindows.push(w);
-		app.addWindow(w);
-		app.$forceUpdate();
-		setTimeout(()=>{
-			const elfinderContainer = document.getElementById(w.window_id)
-			elfinderContainer.appendChild(document.getElementById('elfinder'))
-		}, 0)
+		// const w = {
+		// 	id: 'elfinder-window',
+		// 	window_id: 'elfinder-window-container',
+		// 	name: 'elFinder',
+		// 	fullscreen: true
+		// }
+		// app.allWindows.push(w);
+		// app.addWindow(w);
+		// app.$forceUpdate();
+		// setTimeout(()=>{
+		// 	const elfinderContainer = document.getElementById(w.window_id)
+		// 	elfinderContainer.appendChild(document.getElementById('elfinder'))
+		// }, 0)
 
 		function urlToBase64(url){
 			return new Promise(async (resolve, reject)=>{
