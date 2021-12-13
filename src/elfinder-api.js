@@ -136,7 +136,7 @@ async function initialize(baseURL) {
 	})
 }
 
-function parseFile(file, chunk_callback) {
+export function parseFile(file, chunk_callback) {
 	return new Promise((resolve, reject) => {
 		var fileSize = file.size;
 		var chunkSize = config.chunkSize; // bytes
@@ -178,7 +178,7 @@ function parseFile(file, chunk_callback) {
 	})
 }
 
-async function writeFile(path, file, writeOffset, mode, progressCallback) {
+export async function writeFile(path, file, writeOffset, mode, progressCallback) {
 	let handle
 	writeOffset = writeOffset || 0;
 	mode = mode || 'w';
@@ -791,7 +791,7 @@ api.tree = function (opts, res) {
 
 api.upload = function (opts, res) {
 	return new Promise(async function (resolve, reject) {
-		const target = opts.target
+		const target = opts.target || _private.encode(opts.target_path)
 		const files = opts.upload
 		const paths = opts.upload_path
 		opts.targets = (paths && paths.length === files.length && paths) || files.map(() => target)

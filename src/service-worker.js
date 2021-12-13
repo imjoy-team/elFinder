@@ -1,7 +1,7 @@
 /* eslint no-unused-vars: 0 */
 /* global importScripts, ServiceWorkerWare */
 import { ServiceWorkerWare } from "./service-worker-ware.js"
-import { api as elfinder_api } from './elfinder-api.js';
+import { api as elfinder_api, parseFile, writeFile } from './elfinder-api.js';
 import { version } from '../package.json';
 
 const baseURL = (function () {
@@ -117,40 +117,79 @@ async function handleRequest(route, request) {
     else {
       const path = `${route_path.split('?')[0]}`
       const range = request.headers.get("range");
-      try {
-        const contentType = elfinder_api.mime.getType(path) || 'application/octet-stream';
-        const size = (await elfinder_api.fs.lstat(path)).size;
-        if (range) {
-          const normalizedRange = normalizeRange(range, size)
-          const data = await handleFile({ filePath: path, offset: normalizedRange.offset, length: normalizedRange.length })
-          const file = new File([data], elfinder_api.path.basename(path), {
-            type: contentType,
-          });
-          return {
-            body: file, headers: {
-              "Content-Range": `bytes ${normalizedRange.start}-${normalizedRange.end}/${size}`,
-              "Accept-Ranges": "bytes",
-              "Content-Length": normalizedRange.length,
-              "Content-Type": contentType
-            }, status: 206
+      if (route.type === 'get') {
+        try {
+          const contentType = elfinder_api.mime.getType(path) || 'application/octet-stream';
+          const size = (await elfinder_api.fs.lstat(path)).size;
+          if (range) {
+            const normalizedRange = normalizeRange(range, size)
+            const data = await handleFile({ filePath: path, offset: normalizedRange.offset, length: normalizedRange.length })
+            const file = new File([data], elfinder_api.path.basename(path), {
+              type: contentType,
+            });
+            return {
+              body: file, headers: {
+                "Content-Range": `bytes ${normalizedRange.start}-${normalizedRange.end}/${size}`,
+                "Accept-Ranges": "bytes",
+                "Content-Length": normalizedRange.length,
+                "Content-Type": contentType
+              }, status: 206
+            }
+          }
+          else {
+            const bytes = await elfinder_api.fs.readFile(path)
+            const file = new File([bytes.buffer], elfinder_api.path.basename(path), {
+              type: contentType,
+            });
+            return {
+              body: file, headers: {
+                "Content-Type": contentType,
+                "Content-Length": size,
+              }, status: 200
+            }
           }
         }
-        else {
-          const bytes = await elfinder_api.fs.readFile(path)
-          const file = new File([bytes.buffer], elfinder_api.path.basename(path), {
-            type: contentType,
-          });
-          return {
-            body: file, headers: {
-              "Content-Type": contentType,
-              "Content-Length": size,
-            }, status: 200
-          }
+        catch (e) {
+          console.error(e)
+          return { error: `${e}` }
         }
       }
-      catch (e) {
-        console.error(e)
-        return { error: `${e}` }
+      else if(route.type === 'post'){
+        // A post request requires a form with the following fields in a form:
+        // * file: a file for uploading
+        // * overwrite: whether to overwrite if already exists
+        // * append: append to the file
+        // And the url should be something like: /fs/path/to/the/file
+        let opts = decodeQuery(route_path.split('?')[1])
+        const formData = await request.formData()
+        for (let key of formData.keys()) {
+            opts[key] = formData.get(key)
+        }
+        if(!opts.overwrite && await elfinder_api.fs.exists(path)) {
+          return {body: "File already exists (pass `overwrite=true` to overwrite it)", status: 400}
+        }
+        if(!opts.file){
+          return {body: "File key not found", status: 400}
+        }
+        try{
+          if(opts.append){
+            await parseFile(opts.file, (chunk, offset) => {
+              return new Promise((resolve, reject) => {
+                elfinder_api.fs.appendFile(path, new Uint8Array(chunk), {}, (error) => {
+                  if (error) reject(error)
+                  else resolve()
+                })
+              })
+            })
+          }
+          else{
+            await writeFile(path, file, 0, 'w')
+          }
+          return { body: JSON.stringify({success: true}), status: 200 }
+        }
+        catch(e){
+          return { body: `Failed to save file (${path}): ${e}`, status: 500 }
+        }
       }
     }
   }
