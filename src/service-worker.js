@@ -157,7 +157,6 @@ async function handleRequest(route, request) {
       else if(route.type === 'post'){
         // A post request requires a form with the following fields in a form:
         // * file: a file for uploading
-        // * overwrite: whether to overwrite if already exists
         // * append: append to the file
         // And the url should be something like: /fs/path/to/the/file
         let opts = decodeQuery(route_path.split('?')[1])
@@ -166,17 +165,12 @@ async function handleRequest(route, request) {
             opts[key] = formData.get(key)
         }
         const exists = await elfinder_api.fs.exists(path);
-        if(!opts.overwrite && !opts.append && exists) {
-          return {body: "File already exists (pass `overwrite=true` to overwrite it or set `append=true`)", status: 400}
-        }
         if(!opts.file){
           return {body: "File key not found", status: 400}
         }
         try{
-          if(opts.overwrite && exists){
-            await elfinder_api.fs.unlink(path)
-          }
-          if(opts.append){
+          
+          if(opts.append && exists){
             await parseFile(opts.file, (chunk, offset) => {
               return new Promise((resolve, reject) => {
                 elfinder_api.fs.appendFile(path, new Uint8Array(chunk), {}, (error) => {
