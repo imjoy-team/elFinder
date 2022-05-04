@@ -31,7 +31,7 @@
 		// Start elFinder (REQUIRED)
 		start = function(elFinder, config) {
 			// load jQueryUI CSS
-			elFinder.prototype.loadCss('//cdnjs.cloudflare.com/ajax/libs/jqueryui/'+uiver+'/themes/smoothness/jquery-ui.css');
+			elFinder.prototype.loadCss('https://cdnjs.cloudflare.com/ajax/libs/jqueryui/'+uiver+'/themes/smoothness/jquery-ui.css');
 			
 			$(function() {
 				var opts = {};
@@ -79,8 +79,8 @@
 	require.config({
 		baseUrl : 'js',
 		paths : {
-			'jquery'   : '//cdnjs.cloudflare.com/ajax/libs/jquery/'+(old? '1.12.4' : jqver)+'/jquery.min',
-			'jquery-ui': '//cdnjs.cloudflare.com/ajax/libs/jqueryui/'+uiver+'/jquery-ui.min',
+			'jquery'   : 'https://cdnjs.cloudflare.com/ajax/libs/jquery/'+(old? '1.12.4' : jqver)+'/jquery.min',
+			'jquery-ui': 'https://cdnjs.cloudflare.com/ajax/libs/jqueryui/'+uiver+'/jquery-ui.min',
 			'elfinder' : 'elfinder-minimal.min'
 		},
 		waitSeconds : 10 // optional
