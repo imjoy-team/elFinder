@@ -1,11 +1,11 @@
 {
   "name": "elFinder",
-  "version": "2.1.55a13",
+  "version": "2.1.55a14",
   "description": "File manager for web",
   "main": "Jakefile.js",
   "scripts": {
     "build": "npx webpack --config webpack.config.js --mode production && mkdir -p ./elfinder_client && jake -C ./elfinder_client elfinder",
-    "serve": "nodemon --ext html,js --ignore ./js/proxy --ignore ./js/proxy --ignore ./elfinder_client --ignore ./node_modules --exec \"npx webpack --config webpack.config.js && jake -C ./elfinder_client serve\" --trace"
+    "serve": "mkdir -p ./elfinder_client && nodemon --ext html,js --ignore ./js/proxy --ignore ./js/proxy --ignore ./elfinder_client --ignore ./node_modules --exec \"npx webpack --config webpack.config.js && jake -C ./elfinder_client serve\" --trace"
   },
   "repository": {
     "type": "git",
