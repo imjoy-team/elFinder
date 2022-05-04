@@ -107,7 +107,7 @@
 												ok_button.show()
 											})
 											const _exec = fm.exec
-											fm.exec = function (cmd, files, opts, dstHash) {
+											fm.exec = (function (cmd, files, opts, dstHash) {
 												// intercept the open action
 												if(cmd === "open"){
 													const selected = fm.selectedFiles()
@@ -117,7 +117,8 @@
 												else{
 													_exec(cmd, files, opts, dstHash)
 												}
-											};
+											}).bind(fm);
+
 											const cancel_button = $(`<button style="${buttonStyle}" class="dialog-btn ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only elfinder-btncnt-2 elfinder-tabstop">Cancel</button>`)
 											cancel_button.on('click', () => {
 												api.close()
