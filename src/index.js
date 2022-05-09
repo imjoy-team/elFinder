@@ -26,8 +26,9 @@ if(baseURL.endsWith('.html')){
 
 window.initializeServiceWorker = function(){
 	if ('serviceWorker' in navigator) {
+		const controller = navigator.serviceWorker.controller;
 		// Register the worker and show the list of quotations.
-		if (!navigator.serviceWorker.controller) {
+		if (!controller || !controller.scriptURL.endsWith('/service-worker.js') ) {
 			navigator.serviceWorker.oncontrollerchange = function() {
 				this.controller.onstatechange = function() {
 					if (this.state === 'activated') {
