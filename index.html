@@ -115,7 +115,7 @@
 													resolve(selected);
 												}
 												else{
-													_exec(cmd, files, opts, dstHash)
+													_exec.apply(fm, [cmd, files, opts, dstHash]);
 												}
 											}).bind(fm);
 
