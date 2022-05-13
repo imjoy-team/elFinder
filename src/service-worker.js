@@ -206,6 +206,7 @@ async function handleRequest(route, request) {
 
 const worker = new ServiceWorkerWare();
 const routes = [
+  { path: `${baseURL}fs/:route`, type: 'head' },
   { path: `${baseURL}fs/:route`, type: 'get' },
   { path: `${baseURL}fs/:route`, type: 'post' }
 ]
