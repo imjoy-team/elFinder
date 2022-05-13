@@ -116,11 +116,19 @@ async function handleRequest(route, request) {
     }
     else {
       const path = `${route_path.split('?')[0]}`
-      const range = request.headers.get("range");
-      if (route.type === 'get') {
+      if (route.type === 'get' || route.type === 'head') {
         try {
           const contentType = elfinder_api.mime.getType(path) || 'application/octet-stream';
           const size = (await elfinder_api.fs.lstat(path)).size;
+          if(route.type === 'head'){
+            return {
+              headers: {
+                "Content-Length": `${size}`,
+                "Content-Type": contentType
+              }, status: 206
+            }
+          }
+          const range = request.headers.get("range");
           if (range) {
             const normalizedRange = normalizeRange(range, size)
             const data = await handleFile({ filePath: path, offset: normalizedRange.offset, length: normalizedRange.length })
