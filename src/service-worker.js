@@ -123,9 +123,9 @@ async function handleRequest(route, request) {
           if(route.type === 'head'){
             return {
               headers: {
-                "Content-Length": `${size}`,
+                "Content-Length": size,
                 "Content-Type": contentType
-              }, status: 206
+              }, status: 200
             }
           }
           const range = request.headers.get("range");
