@@ -71,8 +71,8 @@ function normalizeRange(range, size) {
 }
 
 async function handleRequest(route, request) {
+  const route_path = decodeURIComponent('/' + request.parameters.route)
   if (route.path === `${baseURL}fs/:route`) {
-    const route_path = decodeURIComponent('/' + request.parameters.route)
     if (route_path.startsWith('/connector')) {
       let opts = decodeQuery(route_path.split('?')[1])
       if (route.type === 'post') {
@@ -199,6 +199,71 @@ async function handleRequest(route, request) {
       }
     }
   }
+  else if (route.path === `${baseURL}ls/:route`) {
+    if (route.type === 'get' || route.type === 'head') {
+      const absPath = `${route_path.split('?')[0]}`
+      const contentType = 'application/json';
+      let absStat;
+      try{
+        absStat = await elfinder_api.fs.stat(absPath);
+      } catch(e){
+        return { error: `Not found: ${e}`, status: 404 }
+      }
+      
+      let body = null;
+      if(absStat.isDirectory()){
+        const paths = await elfinder_api.fs.readdir(absPath);
+        const files = [];
+        for (let file of paths) {
+          const childPath = `${absPath}/${file}`;
+          const stat = await elfinder_api.fs.stat(childPath);
+          files.push({
+            'type': stat.isDirectory()?'directory': 'file',
+            'name': file,
+            'size': stat.size,
+          });
+        }
+        body = JSON.stringify(
+          {
+            "type": "directory",
+            "path": absPath,
+            "name": absPath.replace(/^.*[\\\/]/, ''),
+            "children": files
+          }
+        )
+      }
+      else{
+        body = JSON.stringify(
+          {
+            "type": "file",
+            "path": absPath,
+            "name": absPath.replace(/^.*[\\\/]/, '')
+          }
+        )
+      }
+      if(route.type === 'head'){
+        return {
+          headers: {
+            "Content-Length": body.length,
+            "Content-Type": contentType
+          }, status: 200
+        }
+      }
+      else{
+        return {
+          body,
+          headers: {
+            "Content-Length": body.length,
+            "Content-Type": contentType
+          }, status: 200
+        }
+      }
+    }
+    else{
+      return { error: 'Not found', status: 404 }
+    }
+  }
+
   return { error: 'Not found', status: 404 }
 }
 
@@ -206,6 +271,8 @@ async function handleRequest(route, request) {
 
 const worker = new ServiceWorkerWare();
 const routes = [
+  { path: `${baseURL}ls/:route`, type: 'head' },
+  { path: `${baseURL}ls/:route`, type: 'get' },
   { path: `${baseURL}fs/:route`, type: 'head' },
   { path: `${baseURL}fs/:route`, type: 'get' },
   { path: `${baseURL}fs/:route`, type: 'post' }
