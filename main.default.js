@@ -171,21 +171,6 @@
 		});
 	}
 
-	// Try to ping the service worker, if no response, reload the page
-	async function waitForServer(){
-		let response = await fetch("/ls/home")
-		let count = 0;
-		while(!response.ok && count<2){
-			response = await fetch("/ls/home")
-			count++;
-			await new Promise((resolve)=> setTimeout(resolve, 500))
-		}
-		if(!response.ok){
-			location.reload();
-			throw new Error("Failed to connect to the service worker, reloading...");
-		}
-	}
-	
-	waitForServer().then(load);
+	load();
 
 })();
