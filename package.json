@@ -39,7 +39,7 @@
     "browserfs": "^1.4.3",
     "content-disposition": "^0.5.4",
     "jimp": "^0.16.1",
-    "jszip": "^3.7.0",
+    "jszip": "^3.8.0",
     "lzutf8": "^0.6.0",
     "mime": "^2.5.2",
     "serviceworker-webpack-plugin": "^1.0.1",
