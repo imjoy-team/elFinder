@@ -2496,7 +2496,7 @@ var elFinder = function(elm, opts, bootCallback) {
 							} 
 						}
 				}
-				
+				if (error) { debugger; }
 				self.trigger(cmd + 'done');
 				dfrd.reject({error: error}, xhr, status);
 			},

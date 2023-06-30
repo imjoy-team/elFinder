@@ -170,7 +170,10 @@
 			}
 		});
 	}
-
-	load();
+	window.initializeServiceWorker().then(() => {
+		// Remove the spinner once the service worker is ready
+		document.getElementById('spinner').style.display = 'none';
+		load();
+	});
 
 })();
