@@ -44,6 +44,12 @@ window.initializeServiceWorker = async function(){
 			console.log('Service worker successfully registered, scope is:', registration.scope);
 			// Wait for the service worker to become active
 			await navigator.serviceWorker.ready;
+			// Reload the page to allow the service worker to intercept requests
+			if (!navigator.serviceWorker.controller) {
+			  // Service worker has just been installed, reload the page
+			  window.location.reload();
+			  throw new Error('Reload the page to allow the service worker to intercept requests.')
+			}
 			let ready = false;
 			while (!ready){
 				const response = await fetch('/fs/connector')
@@ -52,13 +58,6 @@ window.initializeServiceWorker = async function(){
 					break;
 				}
 				await timeout(500);
-			}
-			// Reload the page to allow the service worker to intercept requests
-			if (!navigator.serviceWorker.controller) {
-				debugger
-			  // Service worker has just been installed, reload the page
-			  window.location.reload();
-			  throw new Error('Reload the page to allow the service worker to intercept requests.')
 			}
 		}
 		else{
