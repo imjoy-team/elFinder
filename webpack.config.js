@@ -13,7 +13,18 @@ module.exports = {
   },
   module: {
     rules: [
-    ]
+      {
+        test: /\.m?js$/,
+        // Remove this line if it exists in your current config
+        // exclude: /(node_modules|bower_components)/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env']
+          }
+        }
+      }
+    ],
   },
   plugins: [
     new webpack.DefinePlugin({

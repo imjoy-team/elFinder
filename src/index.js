@@ -9,7 +9,9 @@
  *
  * @author Wei Ouyang
  **/
-
+import Backends from "browserfs/dist/node/core/backends";
+import S3FileSystem from "./s3";
+Backends.S3FS = S3FileSystem;
 
 function guidGenerator() {
     var S4 = function() {

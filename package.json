@@ -27,6 +27,8 @@
   },
   "homepage": "http://studio-42.github.io/elFinder/",
   "devDependencies": {
+    "@babel/preset-env": "^7.22.5",
+    "babel-loader": "^8.3.0",
     "copy-webpack-plugin": "^6.2.1",
     "csso": "<2.0.0",
     "jake": "~8.0.12",
@@ -36,6 +38,7 @@
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.363.0",
     "browserfs": "^1.4.3",
     "content-disposition": "^0.5.4",
     "jimp": "^0.16.1",
