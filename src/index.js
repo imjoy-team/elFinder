@@ -24,6 +24,10 @@ if(baseURL.endsWith('.html')){
 	baseURL = tmp.slice(0, tmp.length-1).join('/') + '/'
 }
 
+function timeout(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 window.initializeServiceWorker = async function(){
 	if ('serviceWorker' in navigator) {
 		const controller = navigator.serviceWorker.controller;
@@ -40,10 +44,21 @@ window.initializeServiceWorker = async function(){
 			console.log('Service worker successfully registered, scope is:', registration.scope);
 			// Wait for the service worker to become active
 			await navigator.serviceWorker.ready;
+			let ready = false;
+			while (!ready){
+				const response = await fetch('/fs/connector')
+				if(response.status === 200){
+					ready = true;
+					break;
+				}
+				await timeout(500);
+			}
 			// Reload the page to allow the service worker to intercept requests
 			if (!navigator.serviceWorker.controller) {
+				debugger
 			  // Service worker has just been installed, reload the page
 			  window.location.reload();
+			  throw new Error('Reload the page to allow the service worker to intercept requests.')
 			}
 		}
 		else{

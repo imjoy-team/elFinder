@@ -98,6 +98,7 @@ async function handleRequest(route, request) {
         }
       }
       console.log(opts)
+      if(!opts.cmd) return { status: 200 }
       try {
         if (opts.cmd === 'file') {
           opts.range = request.headers.get("range")
