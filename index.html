@@ -13,164 +13,170 @@
 		<!-- Rename "main.default.js" to "main.js" and edit it if you need configure elFInder options or any things -->
 		<script data-main="./main.default.js" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
 		<script>
-			window.initializeServiceWorker();
-			define('elFinderConfig', {
-				// elFinder options (REQUIRED)
-				// Documentation for client options:
-				// https://github.com/Studio-42/elFinder/wiki/Client-configuration-options
-				defaultOpts : {
-					url : '/fs/connector', // or connector.maximal.php : connector URL (REQUIRED)
-					height: '100%',
-					// transport : new elFinderSupportBrowserFs(),
-					theme: 'default',
-					themes: {
-						'dark-slim': 'https://johnfort.github.io/elFinder.themes/dark-slim/manifest.json',
-						'material': 'https://nao-pon.github.io/elfinder-theme-manifests/material-default.json',
-						'material-gray': 'https://nao-pon.github.io/elfinder-theme-manifests/material-gray.json',
-						'material-light': 'https://nao-pon.github.io/elfinder-theme-manifests/material-light.json',
-						'win10': 'https://nao-pon.github.io/elfinder-theme-manifests/win10.json'
-					},
-					commandsOptions : {
-						edit : {
-							extraOptions : {
-								// set API key to enable Creative Cloud image editor
-								// see https://console.adobe.io/
-								creativeCloudApiKey : '',
-								// browsing manager URL for CKEditor, TinyMCE
-								// uses self location with the empty value
-								managerUrl : ''
+			window.initializeServiceWorker().then(() => {
+				console.log("Service worker initialized.")
+				define('elFinderConfig', {
+					// elFinder options (REQUIRED)
+					// Documentation for client options:
+					// https://github.com/Studio-42/elFinder/wiki/Client-configuration-options
+					defaultOpts : {
+						url : '/fs/connector', // or connector.maximal.php : connector URL (REQUIRED)
+						height: '100%',
+						// transport : new elFinderSupportBrowserFs(),
+						theme: 'default',
+						themes: {
+							'dark-slim': 'https://johnfort.github.io/elFinder.themes/dark-slim/manifest.json',
+							'material': 'https://nao-pon.github.io/elfinder-theme-manifests/material-default.json',
+							'material-gray': 'https://nao-pon.github.io/elfinder-theme-manifests/material-gray.json',
+							'material-light': 'https://nao-pon.github.io/elfinder-theme-manifests/material-light.json',
+							'win10': 'https://nao-pon.github.io/elfinder-theme-manifests/win10.json'
+						},
+						commandsOptions : {
+							edit : {
+								extraOptions : {
+									// set API key to enable Creative Cloud image editor
+									// see https://console.adobe.io/
+									creativeCloudApiKey : '',
+									// browsing manager URL for CKEditor, TinyMCE
+									// uses self location with the empty value
+									managerUrl : ''
+								}
+							},
+							quicklook : {
+								width: 750,
+								height: 450,
+								// to enable CAD-Files and 3D-Models preview with sharecad.org
+								sharecadMimes : ['image/vnd.dwg', 'image/vnd.dxf', 'model/vnd.dwf', 'application/vnd.hp-hpgl', 'application/plt', 'application/step', 'model/iges', 'application/vnd.ms-pki.stl', 'application/sat', 'image/cgm', 'application/x-msmetafile'],
+								// to enable preview with Google Docs Viewer
+								googleDocsMimes : ['application/pdf', 'image/tiff', 'application/vnd.ms-office', 'application/msword', 'application/vnd.ms-word', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/postscript', 'application/rtf'],
+								// to enable preview with Microsoft Office Online Viewer
+								// these MIME types override "googleDocsMimes"
+								officeOnlineMimes : ['application/vnd.ms-office', 'application/msword', 'application/vnd.ms-word', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.oasis.opendocument.text', 'application/vnd.oasis.opendocument.spreadsheet', 'application/vnd.oasis.opendocument.presentation']
 							}
 						},
-						quicklook : {
-							width: 750,
-							height: 450,
-							// to enable CAD-Files and 3D-Models preview with sharecad.org
-							sharecadMimes : ['image/vnd.dwg', 'image/vnd.dxf', 'model/vnd.dwf', 'application/vnd.hp-hpgl', 'application/plt', 'application/step', 'model/iges', 'application/vnd.ms-pki.stl', 'application/sat', 'image/cgm', 'application/x-msmetafile'],
-							// to enable preview with Google Docs Viewer
-							googleDocsMimes : ['application/pdf', 'image/tiff', 'application/vnd.ms-office', 'application/msword', 'application/vnd.ms-word', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/postscript', 'application/rtf'],
-							// to enable preview with Microsoft Office Online Viewer
-							// these MIME types override "googleDocsMimes"
-							officeOnlineMimes : ['application/vnd.ms-office', 'application/msword', 'application/vnd.ms-word', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.oasis.opendocument.text', 'application/vnd.oasis.opendocument.spreadsheet', 'application/vnd.oasis.opendocument.presentation']
-						}
-					},
-					// bootCalback calls at before elFinder boot up 
-					bootCallback : function(fm, extraObj) {
-						/* any bind functions etc. */
-						fm.bind('init', function() {
-							require(['imjoyLoader'], function (imjoyLoader) {
-							// inside iframe
-							if (window.self !== window.top) {
-								const rootNode = fm.getUI().get(0)
-                				fm.toggleFullscreen(rootNode)
-								loadImJoyRPC({
-									version: "0.5.13"
-								}).then(async (imjoyRPC) => {
-									const api = await imjoyRPC.setupRPC({
-										name: 'ImJoy elFinder',
-										description: 'A web file browser for ImJoy',
-										type: 'rpc-window',
-										version: '{{ IMJOY_ELFINDER_VERSION }}',
-										defaults: {
-											as_dialog: true
-										},
-									})
-
-									function setup() {
-										window.imjoy = {
-											api
+						// bootCalback calls at before elFinder boot up 
+						bootCallback : function(fm, extraObj) {
+							/* any bind functions etc. */
+							fm.bind('init', function() {
+								require(['imjoyLoader'], function (imjoyLoader) {
+								// inside iframe
+								if (window.self !== window.top) {
+									const rootNode = fm.getUI().get(0)
+									fm.toggleFullscreen(rootNode)
+									loadImJoyRPC({
+										version: "0.5.13"
+									}).then(async (imjoyRPC) => {
+										const api = await imjoyRPC.setupRPC({
+											name: 'ImJoy elFinder',
+											description: 'A web file browser for ImJoy',
+											type: 'rpc-window',
+											version: '{{ IMJOY_ELFINDER_VERSION }}',
+											defaults: {
+												as_dialog: true
+											},
+										})
+	
+										function setup() {
+											window.imjoy = {
+												api
+											}
+											api.log('elFinder plugin initialized.')
 										}
-										api.log('elFinder plugin initialized.')
-									}
-									async function close() {
-										await api.close()
-									}
-									async function show() {
-										await api.show()
-									}
-									async function hide() {
-										await api.hide()
-									}
-
-									function getSelections(config) {
-										return new Promise((resolve) => {
-											const buttonStyle = "font-size: 0.65rem; background: #448aff;color: white;margin-right: 10px;margin-top: -4px;margin-left: -8px;width: 40px;"
-											const button_set = $('<div class="ui-dialog-buttonset"></div>')
-											const ok_button = $(`<button style="${buttonStyle}" class="dialog-btn ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only elfinder-btncnt-2 elfinder-tabstop">OK</button>`)
-											ok_button.on('click', () => {
-												const selected = fm.selectedFiles()
-												api.close()
-												resolve(selected);
-												
-											})
-											ok_button.hide()
-											fm.select(() => {
-												ok_button.show()
-											})
-											const _exec = fm.exec
-											fm.exec = (function (cmd, files, opts, dstHash) {
-												// intercept the open action
-												if(cmd === "open"){
+										async function close() {
+											await api.close()
+										}
+										async function show() {
+											await api.show()
+										}
+										async function hide() {
+											await api.hide()
+										}
+	
+										function getSelections(config) {
+											return new Promise((resolve) => {
+												const buttonStyle = "font-size: 0.65rem; background: #448aff;color: white;margin-right: 10px;margin-top: -4px;margin-left: -8px;width: 40px;"
+												const button_set = $('<div class="ui-dialog-buttonset"></div>')
+												const ok_button = $(`<button style="${buttonStyle}" class="dialog-btn ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only elfinder-btncnt-2 elfinder-tabstop">OK</button>`)
+												ok_button.on('click', () => {
 													const selected = fm.selectedFiles()
 													api.close()
 													resolve(selected);
-												}
-												else{
-													_exec.apply(fm, [cmd, files, opts, dstHash]);
-												}
-											}).bind(fm);
-
-											const cancel_button = $(`<button style="${buttonStyle}" class="dialog-btn ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only elfinder-btncnt-2 elfinder-tabstop">Cancel</button>`)
-											cancel_button.on('click', () => {
-												api.close()
-												resolve([])
+													
+												})
+												ok_button.hide()
+												fm.select(() => {
+													ok_button.show()
+												})
+												const _exec = fm.exec
+												fm.exec = (function (cmd, files, opts, dstHash) {
+													// intercept the open action
+													if(cmd === "open"){
+														const selected = fm.selectedFiles()
+														api.close()
+														resolve(selected);
+													}
+													else{
+														_exec.apply(fm, [cmd, files, opts, dstHash]);
+													}
+												}).bind(fm);
+	
+												const cancel_button = $(`<button style="${buttonStyle}" class="dialog-btn ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only elfinder-btncnt-2 elfinder-tabstop">Cancel</button>`)
+												cancel_button.on('click', () => {
+													api.close()
+													resolve([])
+												})
+												button_set.append(ok_button).append(cancel_button)
+												button_set.insertAfter(fm.getUI('statusbar').children('.elfinder-stat-size'));
+												// adjust the window size
+												window.dispatchEvent(new Event('resize'))
+	
+												api.on("close", () => {
+													resolve([])
+												})
 											})
-											button_set.append(ok_button).append(cancel_button)
-											button_set.insertAfter(fm.getUI('statusbar').children('.elfinder-stat-size'));
-											// adjust the window size
-											window.dispatchEvent(new Event('resize'))
-
-											api.on("close", () => {
-												resolve([])
-											})
-										})
-									}
-
-									function run() {
-
-									}
-									api.export({
-										setup,
-										run,
-										close,
-										hide,
-										getSelections
-									});
+										}
+	
+										function run() {
+	
+										}
+										api.export({
+											setup,
+											run,
+											close,
+											hide,
+											getSelections
+										});
+									})
+								}
+								else{
+									setupImJoyApp();
+								}
 								})
-							}
-							else{
-								setupImJoyApp();
-							}
-							})
-						});
-						// for example set document.title dynamically.
-						var title = document.title;
-						fm.bind('open', function() {
-							var path = '',
-								cwd  = fm.cwd();
-							if (cwd) {
-								path = fm.path(cwd.hash) || null;
-							}
-							document.title = path? path + ':' + title : title;
-						}).bind('destroy', function() {
-							document.title = title;
-						});
+							});
+							// for example set document.title dynamically.
+							var title = document.title;
+							fm.bind('open', function() {
+								var path = '',
+									cwd  = fm.cwd();
+								if (cwd) {
+									path = fm.path(cwd.hash) || null;
+								}
+								document.title = path? path + ':' + title : title;
+							}).bind('destroy', function() {
+								document.title = title;
+							});
+						}
+					},
+					managers : {
+						// 'DOM Element ID': { /* elFinder options of this DOM Element */ }
+						'elfinder': {}
 					}
-				},
-				managers : {
-					// 'DOM Element ID': { /* elFinder options of this DOM Element */ }
-					'elfinder': {}
-				}
-			});
+				});
+			}).catch(err => {
+				console.error(err)
+				alert("Failed to initialize service worker.")
+			})
+			
 		</script>
 		<style>
 			.imjoy-dialog-control {

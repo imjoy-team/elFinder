@@ -24,7 +24,7 @@ if(baseURL.endsWith('.html')){
 	baseURL = tmp.slice(0, tmp.length-1).join('/') + '/'
 }
 
-window.initializeServiceWorker = function(){
+window.initializeServiceWorker = async function(){
 	if ('serviceWorker' in navigator) {
 		const controller = navigator.serviceWorker.controller;
 		// Register the worker and show the list of quotations.
@@ -36,12 +36,15 @@ window.initializeServiceWorker = function(){
 					}
 				};
 			};
-			navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
-				console.log('Service worker successfully registered, scope is:', registration.scope);
-			})
-			.catch(function(error) {
-				console.error('Service worker registration failed, error:', error);
-			});
+			const registration = await navigator.serviceWorker.register('/service-worker.js')
+			console.log('Service worker successfully registered, scope is:', registration.scope);
+			// Wait for the service worker to become active
+			await navigator.serviceWorker.ready;
+			// Reload the page to allow the service worker to intercept requests
+			if (!navigator.serviceWorker.controller) {
+			  // Service worker has just been installed, reload the page
+			  window.location.reload();
+			}
 		}
 		else{
 			console.log('Service worker was activated.')
