@@ -1,19 +1,15 @@
 import {
     DeleteObjectsCommand,
     HeadObjectCommand,
+    GetObjectCommand,
     PutObjectCommand,
+    ListObjectsV2Command,
     S3
   } from "@aws-sdk/client-s3"
   import { ApiError, ErrorCode } from "browserfs/dist/node/core/api_error"
   import { BaseFileSystem } from "browserfs/dist/node/core/file_system"
   // import { arrayBuffer2Buffer } from "browserfs/dist/node/core/util";
-  
-  import {
-    DeleteObjectCommand,
-    GetObjectCommand,
-    ListObjectsV2Command
-  } from "@aws-sdk/client-s3"
-  
+
   import {
     FileType,
     default as Stats
@@ -80,31 +76,34 @@ import {
       super()
   
       const s3 = new S3({
-        apiVersion: "2006-03-01",
+        apiVersion: '2006-03-01',
+        signatureVersion: 'v4',
         credentials: {
           accessKeyId: opts.accessKeyId,
           secretAccessKey: opts.secretAccessKey
         },
         region: opts.region,
         endpoint: opts.endpoint,
-        forcePathStyle: true
+        forcePathStyle: true,
+        logger: {
+          log: console.log
+        }
       })
       this._s3 = s3
       this._bucket = opts.bucket
       this._prefix = opts.prefix.startsWith("/")
         ? opts.prefix.slice(1)
         : opts.prefix
-      debugger;
       // Preflight test
       s3.putObject(
         {
           Bucket: opts.bucket,
           Key: join(this._prefix, ".__dir__"),
-          Body: ""
+          Body: "_"
         },
         (err, data) => {
-          console.error(err, data)
           if (err) {
+            console.error(err, data)
             onErrorHandler(cb, ErrorCode.EACCES, err.toString())
           } else {
             cb(null, this)
@@ -170,37 +169,44 @@ import {
         if (path.startsWith("/") && path.length > 1) {
           path = path.substring(1)
         }
-        if (!path.endsWith("/")) {
-          const { ContentLength } = await this._s3.send(
-            new HeadObjectCommand({
-              Bucket: this._bucket,
-              Key: join(this._prefix, path)
-            })
-          )
-          if (ContentLength !== undefined && ContentLength !== null) {
-            const stat = new Stats(FileType.FILE, ContentLength)
-            cb(null, stat)
-          } else {
-            cb(ApiError.ENOENT(path))
-          }
-        } else {
-          const response = await this._s3.send(
-            new ListObjectsV2Command({
-              Bucket: this._bucket,
-              Prefix: join(this._prefix, path.endsWith("/") ? path : `${path}/`),
-              MaxKeys: 1
-            })
-          )
-  
-          if (
-            (response.Contents && response.Contents.length > 0) ||
-            (response.CommonPrefixes && response.CommonPrefixes.length > 0)
-          ) {
-            cb(null, new Stats(FileType.DIRECTORY, 4096))
-          } else {
-            cb(ApiError.ENOENT(path))
+        if(!path.endsWith("/")){
+          try{
+            const { ContentLength } = await this._s3.send(
+              new HeadObjectCommand({
+                Bucket: this._bucket,
+                Key: join(this._prefix, path)
+              })
+            )
+            if (ContentLength !== undefined && ContentLength !== null) {
+              const stat = new Stats(FileType.FILE, ContentLength)
+              cb(null, stat)
+              return
+            }
+            else{
+              throw new Error("Not a file")
+            }
+          } catch(err){
+            // skip if not a file, try as a directory
           }
         }
+
+        const response = await this._s3.send(
+          new ListObjectsV2Command({
+            Bucket: this._bucket,
+            Prefix: join(this._prefix, path.endsWith("/") ? path : `${path}/`),
+            MaxKeys: 1
+          })
+        )
+
+        if (
+          (response.Contents && response.Contents.length > 0) ||
+          (response.CommonPrefixes && response.CommonPrefixes.length > 0)
+        ) {
+          cb(null, new Stats(FileType.DIRECTORY, 4096))
+        } else {
+          cb(ApiError.ENOENT(path))
+        }
+      
       } catch (err) {
         cb(convertError(err))
       }
@@ -384,6 +390,7 @@ import {
     }
   
     convertError(err) {
+      console.error(err);
       if (err.code === "NoSuchKey") {
         return ApiError.FileError(ErrorCode.ENOENT, err)
       } else {

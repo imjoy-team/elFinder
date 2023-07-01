@@ -17,8 +17,8 @@ module.exports = {
     static: {
       directory: path.join(__dirname, 'elfinder_client/'),
     },
-    compress: true,
-    port: 3000,
+    compress: false,
+    port: 4000,
   },  
   module: {
     rules: [

@@ -8,7 +8,7 @@ elFinder.prototype._options.commandsOptions.netmount = {
 	s3: {
 		name : 'S3',
 		inputs: {
-			host     : $('<input type="text" value="s3://github|478667:uVSTErOk2IOqcJL3eAcp@https://s3.imjoy.io/hypha-workspaces/github|478667/"/>'),
+			host     : $('<input type="text" placeholder="s3://" value=""/>'),
 			prefix    : $('<input type="text" value="" class="elfinder-input-optional"/>')
 		}
 	},

@@ -5,7 +5,7 @@
   "main": "Jakefile.js",
   "scripts": {
     "build": "mkdir -p ./elfinder_client && rm -rf ./elfinder_client/* && jake -C ./elfinder_client elfinder && webpack --config webpack.config.js --mode production --progress",
-    "serve": "mkdir -p ./elfinder_client && rm -rf ./elfinder_client/* && jake -C ./elfinder_client elfinder && webpack serve --config webpack.config.js --mode development --progress --hot --port 3000"
+    "serve": "mkdir -p ./elfinder_client && rm -rf ./elfinder_client/* && jake -C ./elfinder_client elfinder && webpack serve --config webpack.config.js --mode development --progress --hot"
   },
   "repository": {
     "type": "git",
@@ -39,7 +39,7 @@
     "webpack-dev-server": "^4"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.363.0",
+    "@aws-sdk/client-s3": "^3.329.0",
     "assert": "^2.0.0",
     "browserfs": "^1.4.3",
     "browserify-zlib": "^0.2.0",
