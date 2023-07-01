@@ -5,6 +5,13 @@
  */
 
 elFinder.prototype._options.commandsOptions.netmount = {
+	s3: {
+		name : 'S3',
+		inputs: {
+			host     : $('<input type="text" placeholder="s3://" value=""/>'),
+			prefix    : $('<input type="text" value="" class="elfinder-input-optional"/>')
+		}
+	},
 	ftp: {
 		name : 'FTP',
 		inputs: {
