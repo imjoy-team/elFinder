@@ -107,6 +107,7 @@ elFinder.prototype.commands.netmount = function() {
 
 						fm.request({data : data, notify : {type : 'netmount', cnt : 1, hideCnt : true}})
 							.done(function(data) {
+								debugger
 								var pdir;
 								if (data.added && data.added.length) {
 									mnt2res && inputs.protocol.trigger('change', 'reset');

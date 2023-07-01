@@ -1,10 +1,11 @@
 import * as BrowserFS from 'browserfs';
 import mime from 'mime';
 import { intersection, each } from 'underscore';
-import Jimp from 'jimp/browser/lib/jimp';
+import Jimp from 'jimp';
 import lz from 'lzutf8';
 import JSZip from 'jszip';
 import contentDisposition from 'content-disposition';
+import S3FS from "./s3";
 
 const ArrayBufferView = Object.getPrototypeOf(
 	Object.getPrototypeOf(new Uint8Array())
@@ -22,6 +23,7 @@ function initBrowserFS() {
 		},
 			e => {
 				if (e) {
+					console.error(e);
 					reject(e);
 					return;
 				}
@@ -80,13 +82,10 @@ function initBrowserFS() {
 }
 
 
-
-
+const removeInvalidFilenameCharacters = (name) =>
+  name.replace(/["*/:<>?\\|]/g, "");
 
 const _private = {};
-
-
-
 
 const config = {
 	chunkSize: 102400000,
@@ -452,10 +451,71 @@ api.mkdir = async function (opts, res) {
 	}
 }
 
+api.netmount = function (opts, res) {
+	return new Promise(function (resolve, reject) {
+		// S3 URI Example: s3://accessKey:secretKey@endpoint/bucket/prefix
+		// Extract access key, secret key, endpoint, bucket, and object from S3 URI
+		const matchResult = opts.host.match(
+			/^s3:\/\/([^:@]+):([^:@]+)@((?:http|https):\/\/[^/]+)\/([^\/]+)\/(.*)$/
+		);
+
+		if (matchResult) {
+			const [, accessKey, secretKey, endpoint, bucket, ...objectParts] =
+				matchResult;
+
+			let prefix = objectParts.join("/");
+			if(opts.prefix) prefix = prefix + "/" + opts.prefix;
+			// replace double // with single /
+			prefix = prefix.replace(/\/\//g, "/");
+			if(!prefix.endsWith('/')) prefix += '/';
+			const parts = prefix ? prefix.split("/") : [];
+			const topLevelFolder =
+				parts.length > 0
+					? parts.filter((part) => part.length > 0).pop()
+					: bucket;
+			S3FS.Create(
+				{
+					accessKeyId: accessKey,
+					endpoint: endpoint,
+					prefix: prefix,
+					region: "eu-west-2",
+					secretAccessKey: secretKey,
+					bucket: bucket,
+				},
+				(error, newFs) => {
+					debugger
+					if (error || !newFs) {
+						reject(error);
+						return;
+					}
+					console.log(newFs);
+					const _fs = BrowserFS.BFSRequire("fs");
+					const rootFs = _fs.getRootFS();
+					const mappedName =
+                    removeInvalidFilenameCharacters(topLevelFolder).trim();
+					const mountedPath = path.join("/s3", mappedName);
+					rootFs.mount(mountedPath, newFs);
+					_private.info(mountedPath).then((info) => {
+						resolve({
+							added: [
+								info
+							],
+						});
+					}).catch((e) => {
+						reject(e);
+					});
+				}
+			);
+		} else {
+			reject("Invalid S3 URI");
+		}
+
+	})
+}
 api.open = async function (opts, res) {
 	const data = {
 		init: opts.init,
-		netDrivers: [],
+		netDrivers: ["s3"],
 		uplMaxFile: 1000,
 		uplMaxSize: "102400.0M"
 	};

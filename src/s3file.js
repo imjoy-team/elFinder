@@ -22,9 +22,9 @@ function convertError(e, message = e.toString()) {
 }
 
 export class S3File extends BaseFile {
-  _inMemoryStorage = new Map()
+  static _inMemoryStorage = new Map()
 
-  _sizeCache = new Map()
+  static _sizeCache = new Map()
 
   _writePosition = 0
   _partNumber = 0

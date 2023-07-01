@@ -80,8 +80,6 @@ var dirmode = 0755,
 		'misc':
 			[
 				path.join(src, 'js', 'proxy', 'elFinderSupportVer1.js'),
-				path.join(src, 'js', 'proxy', 'elFinderSupportBrowserFS.js'),
-				path.join(src, 'js', 'proxy', 'service-worker.js'),
 				path.join(src, 'Changelog'),
 				path.join(src, 'LICENSE.md'),
 				path.join(src, 'CNAME'),
@@ -97,8 +95,6 @@ var dirmode = 0755,
 		'misc-minimal' :
 			[
 				path.join(src, 'js', 'proxy', 'elFinderSupportVer1.js'),
-				path.join(src, 'js', 'proxy', 'elFinderSupportBrowserFS.js'),
-				path.join(src, 'js', 'proxy', 'service-worker.js'),
 				path.join(src, 'Changelog'),
 				path.join(src, 'LICENSE.md'),
 				path.join(src, 'README.md'),
@@ -236,8 +232,7 @@ task('prebuild', function(){
 
 desc('build elFinder');
 task({'elfinder': ['clean', 'prebuild', 'css/elfinder.min.css', 'js/elfinder.min.js', 'misc', 'js/extras', 'js/worker']}, function(){
-	copyFile('./js/proxy/service-worker.js', './service-worker.js');
-	console.log('elFinder build done');
+	console.log('elFinder prebuild done');
 });
 
 desc('start server');
@@ -250,7 +245,7 @@ task({'serve':['elfinder']}, function () {
 
 desc('minimal build elFinder');
 task({'elfinder-minimal': ['clean', 'prebuild', 'css/elfinder.min.css', 'js/elfinder-minimal.min.js', 'misc-minimal']}, function(){
-	console.log('elFinder build done');
+	console.log('elFinder prebuild done');
 });
 
 // CSS

@@ -1,16 +1,25 @@
 const path = require('path');
 const webpack = require('webpack');
 const CopyPlugin = require("copy-webpack-plugin");
-const ServiceWorkerWebpackPlugin = require('serviceworker-webpack-plugin');
-
+const { dirname } = require('path-browserify');
 module.exports = {
-  entry: './src/index.js',
+  entry: {
+    'elFinderSupportBrowserFS': './src/index.js',
+    'service-worker': path.join(__dirname, 'src/service-worker.js'),
+  },
   mode: 'development',
   devtool: "source-map",
   output: {
-    filename: 'elFinderSupportBrowserFS.js',
-    path: path.resolve(__dirname, 'js/proxy'),
+    filename: '[name].js',
+    path: path.resolve(__dirname, 'elfinder_client'),
   },
+  devServer: {
+    static: {
+      directory: path.join(__dirname, 'elfinder_client/'),
+    },
+    compress: true,
+    port: 3000,
+  },  
   module: {
     rules: [
       {
@@ -26,13 +35,26 @@ module.exports = {
       }
     ],
   },
+  resolve: {
+    fallback: { 
+      "fs": false,
+      "assert": require.resolve("assert/"),
+      "stream": require.resolve("stream-browserify"),
+      "path": require.resolve("path-browserify"),
+      "zlib": require.resolve("browserify-zlib"),
+      "util": require.resolve("util/"),
+      "http": require.resolve("stream-http"),
+      "https": require.resolve("https-browserify"),
+      "url": require.resolve("url/"),
+      "querystring": require.resolve("querystring-es3")
+    }
+  },  
   plugins: [
-    new webpack.DefinePlugin({
-      'process.browser': 'true'
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
     }),
-    new ServiceWorkerWebpackPlugin({
-      entry: path.join(__dirname, 'src/service-worker.js'),
-      filename: 'service-worker.js',
-    })
+    new webpack.ProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+    }),
   ]
 };

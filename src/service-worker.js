@@ -2,7 +2,7 @@
 /* global importScripts, ServiceWorkerWare */
 import { ServiceWorkerWare } from "./service-worker-ware.js"
 import { api as elfinder_api, parseFile, writeFile } from './elfinder-api.js';
-import { version } from '../package.json';
+import packageInfo from '../package.json';
 
 const baseURL = (function () {
   var tokens = (self.location + '').split('/');
@@ -89,7 +89,6 @@ async function handleRequest(route, request) {
         const body = await request.text()
         opts = decodeQuery(body)
       }
-
       // convert `targets[]` to `target`
       for (let k of Object.keys(opts)) {
         if (k.endsWith('[]')) {
@@ -97,7 +96,6 @@ async function handleRequest(route, request) {
           delete opts[k]
         }
       }
-      console.log(opts)
       if(!opts.cmd) return { status: 200 }
       try {
         if (opts.cmd === 'file') {
@@ -361,4 +359,4 @@ self.addEventListener('activate', function (event) {
   event.waitUntil(self.clients.claim()); // Become available to all pages
 });
 
-console.log(`Service worker file system is running (${version})`)
+console.log(`Service worker file system is running (${packageInfo.version})`)

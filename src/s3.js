@@ -50,17 +50,17 @@ import {
   }
   
   export default class S3FileSystem extends BaseFileSystem {
-    // Name = "S3"
+    static Name = "S3"
   
     /**
      * Creates a new S3FileSystem instance with the given options.
      * Must be given a configured S3 client and the bucket name.
      */
-    Create(opts, cb) {
+    static Create(opts, cb) {
       new S3FileSystem(opts, cb)
     }
   
-    CreateAsync(opts) {
+    static CreateAsync(opts) {
       return new Promise((resolve, reject) => {
         this.Create(opts, (error, fs) => {
           if (error || !fs) {
@@ -72,7 +72,7 @@ import {
       })
     }
   
-    isAvailable() {
+    static isAvailable() {
       return typeof S3 !== "undefined"
     }
   
@@ -94,6 +94,7 @@ import {
       this._prefix = opts.prefix.startsWith("/")
         ? opts.prefix.slice(1)
         : opts.prefix
+      debugger;
       // Preflight test
       s3.putObject(
         {
@@ -102,8 +103,9 @@ import {
           Body: ""
         },
         (err, data) => {
+          console.error(err, data)
           if (err) {
-            onErrorHandler(cb, ErrorCode.EACCES)
+            onErrorHandler(cb, ErrorCode.EACCES, err.toString())
           } else {
             cb(null, this)
           }
