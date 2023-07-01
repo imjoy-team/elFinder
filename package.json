@@ -1,11 +1,11 @@
 {
   "name": "elFinder",
-  "version": "2.1.55a17",
+  "version": "2.1.62a0",
   "description": "File manager for web",
   "main": "Jakefile.js",
   "scripts": {
-    "build": "npx webpack --config webpack.config.js --mode production && mkdir -p ./elfinder_client && jake -C ./elfinder_client elfinder",
-    "serve": "mkdir -p ./elfinder_client && nodemon --ext html,js --ignore ./js/proxy --ignore ./js/proxy --ignore ./elfinder_client --ignore ./node_modules --exec \"npx webpack --config webpack.config.js && jake -C ./elfinder_client serve\" --trace"
+    "build": "mkdir -p ./elfinder_client && rm -rf ./elfinder_client/* && jake -C ./elfinder_client elfinder && webpack --config webpack.config.js --mode production --progress",
+    "serve": "mkdir -p ./elfinder_client && rm -rf ./elfinder_client/* && jake -C ./elfinder_client elfinder && webpack serve --config webpack.config.js --mode development --progress --hot"
   },
   "repository": {
     "type": "git",
@@ -27,22 +27,36 @@
   },
   "homepage": "http://studio-42.github.io/elFinder/",
   "devDependencies": {
+    "@babel/preset-env": "^7.22.5",
+    "babel-loader": "^8.3.0",
     "copy-webpack-plugin": "^6.2.1",
     "csso": "<2.0.0",
     "jake": "~8.0.12",
     "nodemon": "^2.0.20",
     "uglify-js": "^3.13.10",
-    "webpack": "^4.46.0",
-    "webpack-cli": "^4.5.0"
+    "webpack": "^5",
+    "webpack-cli": "^4",
+    "webpack-dev-server": "^4"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.329.0",
+    "assert": "^2.0.0",
     "browserfs": "^1.4.3",
+    "browserify-zlib": "^0.2.0",
+    "buffer": "^5.7.1",
     "content-disposition": "^0.5.4",
-    "jimp": "^0.16.1",
+    "https-browserify": "^1.0.0",
+    "jimp": "^0.16.13",
     "jszip": "^3.8.0",
     "lzutf8": "^0.6.0",
     "mime": "^2.5.2",
-    "serviceworker-webpack-plugin": "^1.0.1",
-    "underscore": "^1.12.1"
+    "path-browserify": "^1.0.1",
+    "process": "^0.11.10",
+    "querystring-es3": "^0.2.1",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "underscore": "^1.12.1",
+    "url": "^0.11.1",
+    "util": "^0.12.5"
   }
 }
