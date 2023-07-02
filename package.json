@@ -5,7 +5,9 @@
   "main": "Jakefile.js",
   "scripts": {
     "build": "mkdir -p ./elfinder_client && rm -rf ./elfinder_client/* && jake -C ./elfinder_client elfinder && webpack --config webpack.config.js --mode production --progress",
-    "serve": "mkdir -p ./elfinder_client && rm -rf ./elfinder_client/* && jake -C ./elfinder_client elfinder && webpack serve --config webpack.config.js --mode development --progress --hot"
+    "serve": "mkdir -p ./elfinder_client && rm -rf ./elfinder_client/* && jake -C ./elfinder_client elfinder && webpack serve --config webpack.config.js --mode development --progress --hot",
+    "test": "npx playwright test --config playwright-config.js",
+    "test-serve": "npx playwright test"
   },
   "repository": {
     "type": "git",
@@ -28,6 +30,7 @@
   "homepage": "http://studio-42.github.io/elFinder/",
   "devDependencies": {
     "@babel/preset-env": "^7.22.5",
+    "@playwright/test": "^1.35.1",
     "babel-loader": "^8.3.0",
     "copy-webpack-plugin": "^6.2.1",
     "csso": "<2.0.0",

@@ -86,6 +86,7 @@ var dirmode = 0755,
 				path.join(src, 'README.md'),
 				path.join(src, 'composer.json'),
 				path.join(src, 'elfinder.html'),
+				path.join(src, 'test.html'),
 				path.join(src, 'index.html'),
 				path.join(src, 'elfinder.legacy.html'),
 				path.join(src, 'main.default.js')
