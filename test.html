@@ -67,10 +67,22 @@
       imjoy_api: {},
     }).then(async app => {
       const api = app.imjoy.api;
+      const status = document.getElementById("status");
       const fm = await api.createWindow({src:"http://localhost:4000"})
+      let report = document.createElement("p")
+      report.innerHTML = "elFinder loaded."
+      report.id = "report-1"
+      status.appendChild(report)
       await fm.show()
+      report = document.createElement("p")
+      report.innerHTML = "File Dialog loaded."
+      report.id = "report-2"
+      status.appendChild(report)
       await fm.mount(`s3://minioadmin:minioadmin@localhost:9000/testbucket`)
-
+      report = document.createElement("p")
+      report.innerHTML = "S3 volume mounted."
+      report.id = "report-3"
+      status.appendChild(report)
     });
   </script>
   <style>
@@ -86,6 +98,7 @@
       min-height: 200px;
     }
   </style>
+  <div id="status"></div>
 </body>
 
 </html>

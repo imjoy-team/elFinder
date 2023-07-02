@@ -24,4 +24,5 @@ jobs:
       - name: Test npm run test
         run: |
           npm ci
+          npx playwright install
           npm run test
