@@ -519,7 +519,8 @@ api.netmount = function (opts, res) {
 					const mountedPath = path.join("/", mappedName);
 					if (rootFs.mntMap[mountedPath]) {
 						// already mounted
-						console.warn("Already mounted", mountedPath);
+						rootFs.umount(mountedPath);
+						console.warn(`Already mounted: ${mountedPath}, umounting...`);
 					}
 					try {
 						rootFs.mount(mountedPath, newFs)
