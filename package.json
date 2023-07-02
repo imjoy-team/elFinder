@@ -1,6 +1,6 @@
 {
   "name": "elFinder",
-  "version": "2.1.62a0",
+  "version": "2.1.62a1",
   "description": "File manager for web",
   "main": "Jakefile.js",
   "scripts": {
@@ -44,6 +44,7 @@
     "browserfs": "^1.4.3",
     "browserify-zlib": "^0.2.0",
     "buffer": "^5.7.1",
+    "console-browserify": "^1.2.0",
     "content-disposition": "^0.5.4",
     "https-browserify": "^1.0.0",
     "jimp": "^0.16.13",

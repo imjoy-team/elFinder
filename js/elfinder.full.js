@@ -1,6 +1,6 @@
 /*!
  * elFinder - file manager for web
- * Version 2.1.62 (2023-07-01)
+ * Version 2.1.62 (2023-07-02)
  * http://elfinder.org
  * 
  * Copyright 2009-2023, Studio 42
@@ -27305,7 +27305,6 @@ elFinder.prototype.commands.netmount = function() {
 
 						fm.request({data : data, notify : {type : 'netmount', cnt : 1, hideCnt : true}})
 							.done(function(data) {
-								debugger
 								var pdir;
 								if (data.added && data.added.length) {
 									mnt2res && inputs.protocol.trigger('change', 'reset');
