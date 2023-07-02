@@ -104,7 +104,6 @@ async function handleRequest(route, request) {
         }
         else {
           const response = await elfinder_api[opts.cmd](opts)
-          console.log(response)
           return { body: JSON.stringify(response), status: 200 }
         }
       }

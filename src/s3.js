@@ -202,7 +202,7 @@ import {
           (response.Contents && response.Contents.length > 0) ||
           (response.CommonPrefixes && response.CommonPrefixes.length > 0)
         ) {
-          cb(null, new Stats(FileType.DIRECTORY, 4096))
+          cb(null, new Stats(FileType.DIRECTORY, 2))
         } else {
           cb(ApiError.ENOENT(path))
         }
@@ -360,7 +360,11 @@ import {
               ? dirName.slice(this._prefix.length)
               : dirName
             if (relativeDirName !== ".__dir__") {
-              results.push(relativeDirName)
+              if (relativeDirName != "/" && relativeDirName.endsWith("/")) {
+                results.push(relativeDirName.slice(0, -1))
+              } else{
+                results.push(relativeDirName)
+              }
             }
           }
   

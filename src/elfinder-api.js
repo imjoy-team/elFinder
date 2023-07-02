@@ -815,10 +815,19 @@ async function saveImage(img, path) {
 }
 
 async function generateThumbnail(file) {
-	const img = await Jimp.read(await fs.readFile(file))
-	const op = _private.encode(file);
-	await saveImage(img.resize(48, 48), path.join(config.tmbroot, op + ".png"))
-	return op
+	try {
+		// const stat = await fs.lstat(target.absolutePath);
+		// if (stat.size > 1024 * 1024 * 100) return false;
+		const buffer = await fs.readFile(file);
+		const img = await Jimp.read(buffer)
+		const op = _private.encode(file);
+		await saveImage(img.resize(48, 48), path.join(config.tmbroot, op + ".png"))
+		return op
+	}
+	catch (e) {
+		console.error(e)
+		return false;
+	}
 }
 
 api.tmb = function (opts, res) {
@@ -850,15 +859,17 @@ api.tmb = function (opts, res) {
 			.then(function (hashes) {
 				var rtn = {};
 				each(hashes, function (hash) {
-					rtn[hash] = hash + '.png';
+					if (hash)
+						rtn[hash] = hash + '.png';
 				})
 				resolve({
 					images: rtn
 				});
 			})
 			.catch(function (err) {
-				console.log(err);
-				reject(err);
+				console.error(err);
+				// reject(err);
+				resolve({});
 			})
 	})
 }
@@ -1073,8 +1084,9 @@ _private.decode = function (dir) {
 		inputEncoding: "Base64"
 	});
 	name = path.basename(relative);
+	// root might be undefined when volume is not mounted
 	root = config.volumes[volume];
-	return {
+	return root && {
 		volume: volume,
 		dir: root,
 		path: relative,
@@ -1211,7 +1223,6 @@ _private.parse = function (p) {
  */
 _private.readdir = function (dir) {
 	return new Promise(function (resolve, reject) {
-		var current;
 		fs.readdir(dir, async function (err, items) {
 			if (err) return reject(err);
 			var files = [];
