@@ -196,7 +196,30 @@ async function handleRequest(route, request) {
 
 
 
-const worker = new ServiceWorkerWare();
+/**
+ * The name of the cache
+ */
+const CACHE = 'jupyter-precache';
+
+/**
+ * Communication channel for drive access
+ */
+const broadcast = new BroadcastChannel('/api/drive.v1');
+
+const worker = new ServiceWorkerWare({
+  fallbackMiddleware(req){
+    // Handle requests for jupyterlab
+    const url = new URL(req.url);
+    let responsePromise = null;
+    if (shouldBroadcast(url)) {
+      responsePromise = broadcastOne(req);
+      return responsePromise
+    }
+    else{
+      return fetch(req);
+    }
+  }
+});
 const routes = [
   { path: `${baseURL}fs/:route`, type: 'get' },
   { path: `${baseURL}fs/:route`, type: 'post' }
@@ -277,7 +300,8 @@ worker.get('/status', async function (req, res) {
 worker.init();
 
 self.addEventListener('install', function (event) {
-  event.waitUntil(self.skipWaiting()); // Activate worker immediately
+  void self.skipWaiting();
+  event.waitUntil(cacheAll());
 });
 
 self.addEventListener('activate', function (event) {
@@ -285,3 +309,107 @@ self.addEventListener('activate', function (event) {
 });
 
 console.log(`Service worker file system is running (${version})`)
+
+
+
+// utilities
+
+/** Get a cached response, and update cache. */
+async function maybeFromCache(event){
+  const { request } = event;
+
+  let response = await fromCache(request);
+
+  if (response) {
+    event.waitUntil(refetch(request));
+  } else {
+    response = await fetch(request);
+    event.waitUntil(updateCache(request, response.clone()));
+  }
+
+  return response;
+}
+
+/**
+ * Restore a response from the cache based on the request.
+ */
+async function fromCache(request){
+  const cache = await openCache();
+  const response = await cache.match(request);
+
+  if (!response || response.status === 404) {
+    return null;
+  }
+
+  return response;
+}
+
+/**
+ * This is where we call the server to get the newest version of the
+ * file to use the next time we show view
+ */
+async function refetch(request) {
+  const fromServer = await fetch(request);
+  await updateCache(request, fromServer);
+  return fromServer;
+}
+
+/**
+ * Whether a given URL should be broadcast
+ */
+function shouldBroadcast(url) {
+  return url.origin === location.origin && url.pathname.includes('/api/drive');
+}
+
+/**
+ * Whether the fallback behavior should be used
+ */
+function shouldDrop(request, url) {
+  return (
+    request.method !== 'GET' ||
+    url.origin.match(/^http/) === null ||
+    url.pathname.includes('/api/')
+  );
+}
+
+/**
+ * Forward request to main using the broadcast channel
+ */
+async function broadcastOne(request) {
+  const promise = new Promise((resolve) => {
+    broadcast.onmessage = (event) => {
+      resolve(new Response(JSON.stringify(event.data)));
+    };
+  });
+
+  const message = await request.json();
+  // Mark message as being for broadcast.ts
+  // This makes sure we won't get problems with messages
+  // across tabs with multiple notebook tabs open
+  message.receiver = 'broadcast.ts';
+  broadcast.postMessage(message);
+
+  return await promise;
+}
+
+async function openCache() {
+  return await caches.open(CACHE);
+}
+
+/**
+ * Cache a request/response pair.
+ */
+async function updateCache(request, response) {
+  const cache = await openCache();
+  return cache.put(request, response);
+}
+
+/**
+ * Add all to the cache
+ *
+ * this is where we should (try to) add all relevant files
+ */
+async function cacheAll() {
+  const cache = await openCache();
+  return await cache.addAll([]);
+}
