@@ -341,6 +341,7 @@ ServiceWorkerWare.prototype.handleEvent = function sww_handleEvent(evt) {
   debug('Event received: ' + evt.type);
   switch (evt.type) {
     case 'install':
+      self.skipWaiting();
       this.onInstall(evt);
       break;
     case 'fetch':

@@ -1,15 +1,67 @@
 import * as BrowserFS from 'browserfs';
 import mime from 'mime';
 import { intersection, each } from 'underscore';
-import Jimp from 'jimp/browser/lib/jimp';
+import Jimp from 'jimp';
 import lz from 'lzutf8';
 import JSZip from 'jszip';
 import contentDisposition from 'content-disposition';
+import S3FS from "./s3";
 
 const ArrayBufferView = Object.getPrototypeOf(
 	Object.getPrototypeOf(new Uint8Array())
 ).constructor;
 
+function patchFs() {
+	const _fs = BrowserFS.BFSRequire("fs");
+	const buffer = BrowserFS.BFSRequire("buffer");
+
+	//convert arraybuffer to Buffer
+	var convert = function (name, fn) {
+		return function () {
+			const args = Array.prototype.slice.call(arguments);
+			const newargs = [];
+			for (let arg of args) {
+				if (arg instanceof ArrayBuffer) {
+					newargs.push(buffer.Buffer(arg));
+				} else if (arg instanceof ArrayBufferView) {
+					newargs.push(buffer.Buffer(arg.buffer));
+				} else {
+					newargs.push(arg);
+				}
+			}
+			const lastArg = newargs[newargs.length - 1]
+			// if the last argument is not a callback function
+			// then we return a promise
+			if (typeof lastArg === 'function' || name.endsWith('Sync') || name === 'createWriteStream' || name === 'createReadStream') {
+				return fn.apply(_fs, newargs);
+			}
+			else {
+				//  fs.exists has no error passed to the callback
+				if (name === 'exists') {
+					return new Promise((resolve, reject) => {
+						newargs.push((data) => {
+							resolve(data)
+						})
+						fn.apply(_fs, newargs);
+					})
+				}
+				return new Promise((resolve, reject) => {
+					newargs.push((err, data) => {
+						if (err) reject(err)
+						else resolve(data)
+					})
+					fn.apply(_fs, newargs);
+				})
+			}
+		};
+	};
+
+	const fs = {};
+	for (let k in _fs) {
+		fs[k] = convert(k, _fs[k]);
+	}
+	return fs;
+}
 function initBrowserFS() {
 	return new Promise((resolve, reject) => {
 		BrowserFS.configure({
@@ -22,57 +74,11 @@ function initBrowserFS() {
 		},
 			e => {
 				if (e) {
+					console.error(e);
 					reject(e);
 					return;
 				}
-				const _fs = BrowserFS.BFSRequire("fs");
-				const buffer = BrowserFS.BFSRequire("buffer");
-
-				//convert arraybuffer to Buffer
-				var convert = function (name, fn) {
-					return function () {
-						const args = Array.prototype.slice.call(arguments);
-						const newargs = [];
-						for (let arg of args) {
-							if (arg instanceof ArrayBuffer) {
-								newargs.push(buffer.Buffer(arg));
-							} else if (arg instanceof ArrayBufferView) {
-								newargs.push(buffer.Buffer(arg.buffer));
-							} else {
-								newargs.push(arg);
-							}
-						}
-						const lastArg = newargs[newargs.length - 1]
-						// if the last argument is not a callback function
-						// then we return a promise
-						if (typeof lastArg === 'function' || name.endsWith('Sync') || name === 'createWriteStream' || name === 'createReadStream') {
-							return fn.apply(_fs, newargs);
-						}
-						else {
-							//  fs.exists has no error passed to the callback
-							if (name === 'exists') {
-								return new Promise((resolve, reject) => {
-									newargs.push((data) => {
-										resolve(data)
-									})
-									fn.apply(_fs, newargs);
-								})
-							}
-							return new Promise((resolve, reject) => {
-								newargs.push((err, data) => {
-									if (err) reject(err)
-									else resolve(data)
-								})
-								fn.apply(_fs, newargs);
-							})
-						}
-					};
-				};
-
-				const fs = {};
-				for (let k in _fs) {
-					fs[k] = convert(k, _fs[k]);
-				}
+				const fs = patchFs();
 				const path = BrowserFS.BFSRequire("path");
 				resolve({ fs, path });
 			});
@@ -80,13 +86,10 @@ function initBrowserFS() {
 }
 
 
-
-
+const removeInvalidFilenameCharacters = (name) =>
+	name.replace(/["*/:<>?\\|]/g, "");
 
 const _private = {};
-
-
-
 
 const config = {
 	chunkSize: 102400000,
@@ -103,7 +106,25 @@ const config = {
 	}
 }
 
+function addNetworkVolume(mountPath, permissions) {
+	// remove the item from config.roots based on the mountPath
+	const volume = config.roots.findIndex((root) => root.path === mountPath);
+	if (volume >= 0) {
+		config.roots.splice(volume, 1);
+		config.volumes.splice(volume, 1);
+		config.volumeicons.splice(volume, 1);
+	}
+	config.roots.push({
+		url: `${rootURL}fs${mountPath}/`,
+		path: mountPath,
+		permissions
+	});
+	config.volumes.push(mountPath)
+	config.volumeicons.push('elfinder-navbar-root-network')
+}
+
 let fs, path;
+let rootURL = '/'
 async function initialize(baseURL) {
 	const roots = [
 		{
@@ -116,8 +137,9 @@ async function initialize(baseURL) {
 			path: "/tmp",   //Required
 			permissions: { read: 1, write: 1, lock: 0 }
 		}]
+	rootURL = baseURL;
 	config.roots = roots;
-	config.volumes = roots.map((r) => r.path)
+	config.volumes = config.roots.map((r) => r.path)
 	config.tmburl = `${baseURL}fs/tmp/.tmb/`;
 	config.acl = function (path) {
 		var volume = _private.volume(path);
@@ -452,10 +474,89 @@ api.mkdir = async function (opts, res) {
 	}
 }
 
+api.netmount = function (opts, res) {
+	return new Promise(function (resolve, reject) {
+		// S3 URI Example: s3://accessKey:secretKey@endpoint/bucket/prefix
+		// Extract access key, secret key, endpoint, bucket, and object from S3 URI
+		const matchResult = opts.host.match(
+			/^s3:\/\/([^:@]+):([^:@]+)@((?:http|https):\/\/[^/]+)\/([^\/]+)\/(.*)$/
+		);
+
+		if (matchResult) {
+			const [, accessKey, secretKey, endpoint, bucket, ...objectParts] =
+				matchResult;
+
+			let prefix = objectParts.join("/");
+			if (opts.prefix) prefix = prefix + "/" + opts.prefix;
+			// replace double // with single /
+			prefix = prefix.replace(/\/\//g, "/");
+			if (!prefix.endsWith('/')) prefix += '/';
+			let parts = prefix ? prefix.split("/") : [];
+			parts = parts.filter((part) => part.length > 0);
+			const topLevelFolder =
+				parts.length > 0
+					? parts.pop()
+					: bucket;
+			S3FS.Create(
+				{
+					accessKeyId: accessKey,
+					endpoint: endpoint,
+					prefix: prefix,
+					region: "eu-west-2",
+					secretAccessKey: secretKey,
+					bucket: bucket,
+				},
+				(error, newFs) => {
+					if (error || !newFs) {
+						reject(error);
+						return;
+					}
+					console.log(newFs);
+					const _fs = BrowserFS.BFSRequire("fs");
+					const rootFs = _fs.getRootFS();
+					const mappedName =
+						removeInvalidFilenameCharacters(topLevelFolder).trim();
+					const mountedPath = path.join("/", mappedName);
+					if (rootFs.mntMap[mountedPath]) {
+						// already mounted
+						rootFs.umount(mountedPath);
+						console.warn(`Already mounted: ${mountedPath}, umounting...`);
+					}
+					try {
+						rootFs.mount(mountedPath, newFs)
+						// update fs
+						fs = patchFs();
+						addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 });
+					}
+					catch (e) {
+						reject(e);
+						return;
+					}
+					setTimeout(() => {
+						_private.info(mountedPath).then((info) => {
+							resolve({
+								added: [
+									info
+								],
+							});
+						}).catch((e) => {
+							reject(e);
+						});
+					}, 10);
+
+
+				}
+			);
+		} else {
+			reject("Invalid S3 URI");
+		}
+
+	})
+}
 api.open = async function (opts, res) {
 	const data = {
 		init: opts.init,
-		netDrivers: [],
+		netDrivers: ["s3"],
 		uplMaxFile: 1000,
 		uplMaxSize: "102400.0M"
 	};
@@ -715,10 +816,19 @@ async function saveImage(img, path) {
 }
 
 async function generateThumbnail(file) {
-	const img = await Jimp.read(await fs.readFile(file))
-	const op = _private.encode(file);
-	await saveImage(img.resize(48, 48), path.join(config.tmbroot, op + ".png"))
-	return op
+	try {
+		// const stat = await fs.lstat(target.absolutePath);
+		// if (stat.size > 1024 * 1024 * 100) return false;
+		const buffer = await fs.readFile(file);
+		const img = await Jimp.read(buffer)
+		const op = _private.encode(file);
+		await saveImage(img.resize(48, 48), path.join(config.tmbroot, op + ".png"))
+		return op
+	}
+	catch (e) {
+		console.error(e)
+		return false;
+	}
 }
 
 api.tmb = function (opts, res) {
@@ -750,15 +860,17 @@ api.tmb = function (opts, res) {
 			.then(function (hashes) {
 				var rtn = {};
 				each(hashes, function (hash) {
-					rtn[hash] = hash + '.png';
+					if (hash)
+						rtn[hash] = hash + '.png';
 				})
 				resolve({
 					images: rtn
 				});
 			})
 			.catch(function (err) {
-				console.log(err);
-				reject(err);
+				console.error(err);
+				// reject(err);
+				resolve({});
 			})
 	})
 }
@@ -973,8 +1085,9 @@ _private.decode = function (dir) {
 		inputEncoding: "Base64"
 	});
 	name = path.basename(relative);
+	// root might be undefined when volume is not mounted
 	root = config.volumes[volume];
-	return {
+	return root && {
 		volume: volume,
 		dir: root,
 		path: relative,
@@ -1014,7 +1127,8 @@ _private.info = function (p) {
 				hash: _private.encode(p),
 				mime: stat.isDirectory() ? 'directory' : _private.getMime(p),
 				ts: Math.floor(stat.mtime.getTime() / 1000),
-				volumeid: 'v' + info.volume + '_'
+				volumeid: 'v' + info.volume + '_',
+				path: p, // expose real path
 			}
 			if (r.mime && r.mime.indexOf('image/') == 0) {
 				var filename = _private.encode(p);
@@ -1110,7 +1224,6 @@ _private.parse = function (p) {
  */
 _private.readdir = function (dir) {
 	return new Promise(function (resolve, reject) {
-		var current;
 		fs.readdir(dir, async function (err, items) {
 			if (err) return reject(err);
 			var files = [];

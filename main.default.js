@@ -7,7 +7,7 @@
 (function(){
 	"use strict";
 	var // jQuery and jQueryUI version
-		jqver = '3.4.1',
+		jqver = '3.6.0',
 		uiver = '1.12.1',
 		
 		// Detect language (optional)
@@ -46,7 +46,7 @@
 		// Start elFinder (REQUIRED)
 		start = function(elFinder, editors, config) {
 			// load jQueryUI CSS
-			elFinder.prototype.loadCss('//cdnjs.cloudflare.com/ajax/libs/jqueryui/'+uiver+'/themes/smoothness/jquery-ui.css');
+			elFinder.prototype.loadCss('https://cdnjs.cloudflare.com/ajax/libs/jqueryui/'+uiver+'/themes/smoothness/jquery-ui.css');
 
 			$(function() {
 				var optEditors = {
@@ -124,8 +124,8 @@
 	require.config({
 		baseUrl : 'js',
 		paths : {
-			'jquery'   : '//cdnjs.cloudflare.com/ajax/libs/jquery/'+(old? '1.12.4' : jqver)+'/jquery.min',
-			'jquery-ui': '//cdnjs.cloudflare.com/ajax/libs/jqueryui/'+uiver+'/jquery-ui.min',
+			'jquery'   : 'https://cdnjs.cloudflare.com/ajax/libs/jquery/'+(old? '1.12.4' : jqver)+'/jquery.min',
+			'jquery-ui': 'https://cdnjs.cloudflare.com/ajax/libs/jqueryui/'+uiver+'/jquery-ui.min',
 			'elfinder' : 'elfinder.full',
 			'editors': 'extras/editors.default',
 			'imjoyLoader': 'https://lib.imjoy.io/imjoy-loader',
@@ -170,8 +170,10 @@
 			}
 		});
 	}
-
-	// load JavaScripts (REQUIRED)
-	load();
+	window.initializeServiceWorker().then(() => {
+		// Remove the spinner once the service worker is ready
+		document.getElementById('spinner').style.display = 'none';
+		load();
+	});
 
 })();

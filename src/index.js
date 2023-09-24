@@ -10,7 +10,6 @@
  * @author Wei Ouyang
  **/
 
-
 function guidGenerator() {
     var S4 = function() {
        return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
@@ -24,10 +23,15 @@ if(baseURL.endsWith('.html')){
 	baseURL = tmp.slice(0, tmp.length-1).join('/') + '/'
 }
 
-window.initializeServiceWorker = function(){
+function timeout(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+window.initializeServiceWorker = async function(){
 	if ('serviceWorker' in navigator) {
+		const controller = navigator.serviceWorker.controller;
 		// Register the worker and show the list of quotations.
-		if (!navigator.serviceWorker.controller) {
+		if (!controller || !controller.scriptURL.endsWith('/service-worker.js') ) {
 			navigator.serviceWorker.oncontrollerchange = function() {
 				this.controller.onstatechange = function() {
 					if (this.state === 'activated') {
@@ -35,12 +39,25 @@ window.initializeServiceWorker = function(){
 					}
 				};
 			};
-			navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
-				console.log('Service worker successfully registered, scope is:', registration.scope);
-			})
-			.catch(function(error) {
-				console.error('Service worker registration failed, error:', error);
-			});
+			const registration = await navigator.serviceWorker.register('/service-worker.js')
+			console.log('Service worker successfully registered, scope is:', registration.scope);
+			// Wait for the service worker to become active
+			await navigator.serviceWorker.ready;
+			// Reload the page to allow the service worker to intercept requests
+			if (!navigator.serviceWorker.controller) {
+			  // Service worker has just been installed, reload the page
+			  window.location.reload();
+			  throw new Error('Reload the page to allow the service worker to intercept requests.')
+			}
+			let ready = false;
+			while (!ready){
+				const response = await fetch('/fs/connector')
+				if(response.status === 200){
+					ready = true;
+					break;
+				}
+				await timeout(500);
+			}
 		}
 		else{
 			console.log('Service worker was activated.')

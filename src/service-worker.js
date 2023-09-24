@@ -2,7 +2,7 @@
 /* global importScripts, ServiceWorkerWare */
 import { ServiceWorkerWare } from "./service-worker-ware.js"
 import { api as elfinder_api, parseFile, writeFile } from './elfinder-api.js';
-import { version } from '../package.json';
+import packageInfo from '../package.json';
 
 const baseURL = (function () {
   var tokens = (self.location + '').split('/');
@@ -71,8 +71,8 @@ function normalizeRange(range, size) {
 }
 
 async function handleRequest(route, request) {
+  const route_path = decodeURIComponent('/' + request.parameters.route)
   if (route.path === `${baseURL}fs/:route`) {
-    const route_path = decodeURIComponent('/' + request.parameters.route)
     if (route_path.startsWith('/connector')) {
       let opts = decodeQuery(route_path.split('?')[1])
       if (route.type === 'post') {
@@ -89,7 +89,6 @@ async function handleRequest(route, request) {
         const body = await request.text()
         opts = decodeQuery(body)
       }
-
       // convert `targets[]` to `target`
       for (let k of Object.keys(opts)) {
         if (k.endsWith('[]')) {
@@ -97,7 +96,7 @@ async function handleRequest(route, request) {
           delete opts[k]
         }
       }
-      console.log(opts)
+      if(!opts.cmd) return { status: 200 }
       try {
         if (opts.cmd === 'file') {
           opts.range = request.headers.get("range")
@@ -105,7 +104,6 @@ async function handleRequest(route, request) {
         }
         else {
           const response = await elfinder_api[opts.cmd](opts)
-          console.log(response)
           return { body: JSON.stringify(response), status: 200 }
         }
       }
@@ -116,11 +114,19 @@ async function handleRequest(route, request) {
     }
     else {
       const path = `${route_path.split('?')[0]}`
-      const range = request.headers.get("range");
-      if (route.type === 'get') {
+      if (route.type === 'get' || route.type === 'head') {
         try {
           const contentType = elfinder_api.mime.getType(path) || 'application/octet-stream';
           const size = (await elfinder_api.fs.lstat(path)).size;
+          if(route.type === 'head'){
+            return {
+              headers: {
+                "Content-Length": size,
+                "Content-Type": contentType
+              }, status: 200
+            }
+          }
+          const range = request.headers.get("range");
           if (range) {
             const normalizedRange = normalizeRange(range, size)
             const data = await handleFile({ filePath: path, offset: normalizedRange.offset, length: normalizedRange.length })
@@ -191,6 +197,71 @@ async function handleRequest(route, request) {
       }
     }
   }
+  else if (route.path === `${baseURL}ls/:route`) {
+    if (route.type === 'get' || route.type === 'head') {
+      const absPath = `${route_path.split('?')[0]}`
+      const contentType = 'application/json';
+      let absStat;
+      try{
+        absStat = await elfinder_api.fs.stat(absPath);
+      } catch(e){
+        return { error: `Not found: ${e}`, status: 404 }
+      }
+      
+      let body = null;
+      if(absStat.isDirectory()){
+        const paths = await elfinder_api.fs.readdir(absPath);
+        const files = [];
+        for (let file of paths) {
+          const childPath = `${absPath}/${file}`;
+          const stat = await elfinder_api.fs.stat(childPath);
+          files.push({
+            'type': stat.isDirectory()?'directory': 'file',
+            'name': file,
+            'size': stat.size,
+          });
+        }
+        body = JSON.stringify(
+          {
+            "type": "directory",
+            "path": absPath,
+            "name": absPath.replace(/^.*[\\\/]/, ''),
+            "children": files
+          }
+        )
+      }
+      else{
+        body = JSON.stringify(
+          {
+            "type": "file",
+            "path": absPath,
+            "name": absPath.replace(/^.*[\\\/]/, '')
+          }
+        )
+      }
+      if(route.type === 'head'){
+        return {
+          headers: {
+            "Content-Length": body.length,
+            "Content-Type": contentType
+          }, status: 200
+        }
+      }
+      else{
+        return {
+          body,
+          headers: {
+            "Content-Length": body.length,
+            "Content-Type": contentType
+          }, status: 200
+        }
+      }
+    }
+    else{
+      return { error: 'Not found', status: 404 }
+    }
+  }
+
   return { error: 'Not found', status: 404 }
 }
 
@@ -221,6 +292,9 @@ const worker = new ServiceWorkerWare({
   }
 });
 const routes = [
+  { path: `${baseURL}ls/:route`, type: 'head' },
+  { path: `${baseURL}ls/:route`, type: 'get' },
+  { path: `${baseURL}fs/:route`, type: 'head' },
   { path: `${baseURL}fs/:route`, type: 'get' },
   { path: `${baseURL}fs/:route`, type: 'post' }
 ]
@@ -307,9 +381,6 @@ self.addEventListener('install', function (event) {
 self.addEventListener('activate', function (event) {
   event.waitUntil(self.clients.claim()); // Become available to all pages
 });
-
-console.log(`Service worker file system is running (${version})`)
-
 
 
 // utilities
@@ -413,3 +484,5 @@ async function cacheAll() {
   const cache = await openCache();
   return await cache.addAll([]);
 }
+
+console.log(`Service worker file system is running (${packageInfo.version})`)
