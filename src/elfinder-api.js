@@ -436,6 +436,7 @@ api.ls = function (opts, res) {
 					list: _files
 				});
 			})
+			.catch(reject)
 	})
 }
 
