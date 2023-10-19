@@ -12,7 +12,7 @@ In this project, we use elFinder as a file manager for [ImJoy](https://imjoy.io)
 
 You can go to https://jupyter.imjoy.io/, start a notebook and run the following code to open the file manager:
 
-Show the file manager:
+Show the file manager as an ImJoy plugin:
 ```python
 from imjoy_rpc import api
 async def setup():  
@@ -43,6 +43,7 @@ api.export({"setup": setup})
 
 ![Screenshot for elfinder dialog](./files/Screenshot-dialog-elfinder.png)
 
+### Access elFinder files from Python
 
 With the help of some utility functions in Python, you can also operate the files in the file manager:
 
@@ -65,7 +66,7 @@ files = elfinder_listdir('/home')
 print(files)
 ```
 
-## S3 backend
+### Using elFinder with remote files on S3
 
 You can use it to operate remote files on S3, by mount the S3 bucket to the browserfs. See the example below:
 
