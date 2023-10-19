@@ -25,7 +25,7 @@ api.export({"setup": setup})
 
 With the following window open, you can drag and drop files to the file manager to upload them to the browser, download or preview files.
 
-![Screenshot for elfinder window](./files/Screenshot-dialog-elfinder.png)
+![Screenshot for elfinder window](./img/Screenshot-dialog-elfinder.png)
 
 ```python
 from imjoy_rpc import api
@@ -41,7 +41,7 @@ async def setup():
 api.export({"setup": setup})
 ```
 
-![Screenshot for elfinder dialog](./files/Screenshot-dialog-elfinder.png)
+![Screenshot for elfinder dialog](./img/Screenshot-dialog-elfinder.png)
 
 ### Access elFinder files from Python
 
