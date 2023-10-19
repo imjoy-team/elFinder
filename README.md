@@ -1,11 +1,14 @@
-ImJoy elFinder
+elFinder for ImJoy
 ========
 
 elFinder is an open-source file manager for web, written in JavaScript using jQuery UI. See the original project [here](https://github.com/Studio-42/elFinder).
 
-In this project, we use elFinder as a file manager for ImJoy and integrated with [BrowserFS](https://github.com/jvilk/BrowserFS). By using a service worker, we can mount browserfs running inside a service worker, connect to IndexedDB, S3 backend, and provide an ImJoy interface to interact it inside a Jupyter notebook or other ImJoy supported websites.
+In this project, we use elFinder as a file manager for [ImJoy](https://imjoy.io) and integrated with [BrowserFS](https://github.com/jvilk/BrowserFS). By using a service worker, we can mount browserfs running inside a service worker, connect to IndexedDB, S3 backend, and provide an ImJoy interface to interact it inside a Jupyter notebook or other ImJoy supported websites.
 
-## Usage
+**To try the elFinder, visit https://fm.imjoy.io/**
+
+
+## Usage for ImJoy
 
 You can go to https://jupyter.imjoy.io/, start a notebook and run the following code to open the file manager:
 
