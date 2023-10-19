@@ -84,6 +84,39 @@
 					/* any bind functions etc. */
 					fm.bind('init', function () {
 						require(['imjoyLoader'], function (imjoyLoader) {
+							function mount(host) {
+								return new Promise((resolve, reject) => {
+									fm.request({
+										data: {
+											cmd: 'netmount',
+											protocol: 's3',
+											host,
+										},
+										preventFail: true,
+										notify: { type: 'netmount', cnt: 1, hideCnt: true }
+									}).done(function (data) {
+										var pdir;
+										if (data.added && data.added.length) {
+											if (data.added[0].phash) {
+												if (pdir = fm.file(data.added[0].phash)) {
+													if (!pdir.dirs) {
+														pdir.dirs = 1;
+														fm.change({ changed: [pdir] });
+													}
+												}
+											}
+											fm.one('netmountdone', function () {
+												fm.exec('open', data.added[0].hash);
+												fm.one('opendone', function () {
+													data.toast && fm.toast(data.toast);
+												});
+											});
+										}
+										resolve();
+									})
+										.fail(reject)
+								})
+							}
 							// inside iframe
 							if (window.self !== window.top) {
 								const rootNode = fm.getUI().get(0)
@@ -115,39 +148,6 @@
 									}
 									async function hide() {
 										await api.hide()
-									}
-									function mount(host) {
-										return new Promise((resolve, reject) => {
-											fm.request({
-												data: {
-													cmd: 'netmount',
-													protocol: 's3',
-													host,
-												},
-												preventFail: true,
-												notify: { type: 'netmount', cnt: 1, hideCnt: true }
-											}).done(function (data) {
-												var pdir;
-												if (data.added && data.added.length) {
-													if (data.added[0].phash) {
-														if (pdir = fm.file(data.added[0].phash)) {
-															if (!pdir.dirs) {
-																pdir.dirs = 1;
-																fm.change({ changed: [pdir] });
-															}
-														}
-													}
-													fm.one('netmountdone', function () {
-														fm.exec('open', data.added[0].hash);
-														fm.one('opendone', function () {
-															data.toast && fm.toast(data.toast);
-														});
-													});
-												}
-												resolve();
-											})
-												.fail(reject)
-										})
 									}
 									function getSelections(config) {
 										return new Promise((resolve) => {
@@ -208,6 +208,12 @@
 							}
 							else {
 								setupImJoyApp();
+								// get the a list of query `mount` values and mount them
+								const query = new URLSearchParams(window.location.search);
+								const mounts = query.getAll('mount')
+								for (const host of mounts) {
+									mount(host).catch(console.error);
+								}
 							}
 						})
 					});
