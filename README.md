@@ -89,7 +89,7 @@ async def setup():
 api.export({"setup": setup})
 ```
 
-As a more complete example, you can use it manage files in the Hypha App Engine.
+As a more complete example, you can use it manage files in the [Hypha App Engine](https://ha.amun.ai/).
 ```python
 from imjoy_rpc import api
 from imjoy_rpc.hypha import login, connect_to_server
