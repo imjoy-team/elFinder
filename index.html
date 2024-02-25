@@ -152,41 +152,32 @@
 									function getSelections(config) {
 										return new Promise((resolve) => {
 											const buttonStyle = "font-size: 0.65rem; background: #448aff;color: white;margin-right: 10px;margin-top: -4px;margin-left: -8px;width: 40px;"
-											const button_set = $('<div class="ui-dialog-buttonset"></div>')
-											const ok_button = $(`<button style="${buttonStyle}" class="dialog-btn ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only elfinder-btncnt-2 elfinder-tabstop">OK</button>`)
+											// Check if buttons already exist
+											let ok_button = $('#ok-button');
+											let cancel_button = $('#cancel-button');
+
+											if (!ok_button.length || !cancel_button.length) {
+												ok_button = $(`<button id="ok-button" style="${buttonStyle}" class="dialog-btn ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only elfinder-btncnt-2 elfinder-tabstop">OK</button>`)
+												cancel_button = $(`<button id="cancel-button" style="${buttonStyle}" class="dialog-btn ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only elfinder-btncnt-2 elfinder-tabstop">Cancel</button>`)
+												const button_set = $('<div class="ui-dialog-buttonset"></div>')
+												button_set.append(ok_button).append(cancel_button)
+												button_set.insertAfter(fm.getUI('statusbar').children('.elfinder-stat-size'));
+											}
 											ok_button.on('click', () => {
 												const selected = fm.selectedFiles()
-												api.close()
+												if(config === undefined || !config.close_on_select) api.close()
 												resolve(selected);
-
 											})
 											ok_button.hide()
 											fm.select(() => {
 												ok_button.show()
 											})
-											const _exec = fm.exec
-											fm.exec = (function (cmd, files, opts, dstHash) {
-												// intercept the open action
-												if (cmd === "open") {
-													const selected = fm.selectedFiles()
-													api.close()
-													resolve(selected);
-												}
-												else {
-													_exec.apply(fm, [cmd, files, opts, dstHash]);
-												}
-											}).bind(fm);
-
-											const cancel_button = $(`<button style="${buttonStyle}" class="dialog-btn ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only elfinder-btncnt-2 elfinder-tabstop">Cancel</button>`)
 											cancel_button.on('click', () => {
-												api.close()
+												if(config === undefined || !config.close_on_select) api.close()
 												resolve([])
 											})
-											button_set.append(ok_button).append(cancel_button)
-											button_set.insertAfter(fm.getUI('statusbar').children('.elfinder-stat-size'));
 											// adjust the window size
 											window.dispatchEvent(new Event('resize'))
-
 											api.on("close", () => {
 												resolve([])
 											})
