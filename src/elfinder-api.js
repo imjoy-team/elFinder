@@ -498,7 +498,10 @@ api.netmount = function (opts, res) {
 				parts.length > 0
 					? parts.pop()
 					: bucket;
-			console.log(`Mounting S3 bucket ${bucket} at ${topLevelFolder}...(prefix: ${prefix}, endpoint: ${endpoint}, accessKey: ${accessKey}, secretKey: ${secretKey}`);
+			console.log(`Mounting S3 bucket ${bucket} at ${topLevelFolder}...(prefix: ${prefix}, endpoint: ${endpoint}`);
+			const mappedName =
+				removeInvalidFilenameCharacters(topLevelFolder).trim();
+			const mountedPath = path.join("/", mappedName);
 			S3FS.Create(
 				{
 					accessKeyId: accessKey,
@@ -516,9 +519,7 @@ api.netmount = function (opts, res) {
 					console.log(newFs);
 					const _fs = BrowserFS.BFSRequire("fs");
 					const rootFs = _fs.getRootFS();
-					const mappedName =
-						removeInvalidFilenameCharacters(topLevelFolder).trim();
-					const mountedPath = path.join("/", mappedName);
+					
 					if (rootFs.mntMap[mountedPath]) {
 						// already mounted
 						rootFs.umount(mountedPath);
@@ -529,6 +530,7 @@ api.netmount = function (opts, res) {
 						// update fs
 						fs = patchFs();
 						addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 });
+						console.log('Mounted S3 bucket at', mountedPath);
 					}
 					catch (e) {
 						reject(e);
@@ -582,6 +584,9 @@ api.open = async function (opts, res) {
 	}
 	//NOTE target must always be directory
 	_target = _private.decode(_target);
+	if(!_target) {
+		_target = _private.decode("v0_Lw");
+	}
 	const result = await _private.info(_target.absolutePath)
 	data.cwd = result;
 	data.files = []
