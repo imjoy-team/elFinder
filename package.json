@@ -1,6 +1,6 @@
 {
   "name": "elFinder",
-  "version": "2.1.62a1",
+  "version": "2.1.62a2",
   "description": "File manager for web",
   "main": "Jakefile.js",
   "scripts": {
@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.329.0",
+    "@babel/core": "^7.23.9",
     "assert": "^2.0.0",
     "browserfs": "^1.4.3",
     "browserify-zlib": "^0.2.0",

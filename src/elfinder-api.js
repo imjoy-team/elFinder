@@ -498,6 +498,7 @@ api.netmount = function (opts, res) {
 				parts.length > 0
 					? parts.pop()
 					: bucket;
+			console.log(`Mounting S3 bucket ${bucket} at ${topLevelFolder}...(prefix: ${prefix}, endpoint: ${endpoint}, accessKey: ${accessKey}, secretKey: ${secretKey}`);
 			S3FS.Create(
 				{
 					accessKeyId: accessKey,
@@ -549,7 +550,7 @@ api.netmount = function (opts, res) {
 				}
 			);
 		} else {
-			reject("Invalid S3 URI");
+			reject(`Invalid S3 URI: ${opts.host}`);
 		}
 
 	})
