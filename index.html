@@ -165,16 +165,16 @@
 											}
 											ok_button.on('click', () => {
 												const selected = fm.selectedFiles()
-												if(config === undefined || !config.close_on_select) api.close()
 												resolve(selected);
+												if(config === undefined || !config.close_on_select) api.close()
 											})
 											ok_button.hide()
 											fm.select(() => {
 												ok_button.show()
 											})
 											cancel_button.on('click', () => {
-												if(config === undefined || !config.close_on_select) api.close()
 												resolve([])
+												if(config === undefined || !config.close_on_select) api.close()
 											})
 											// adjust the window size
 											window.dispatchEvent(new Event('resize'))
