@@ -45,6 +45,7 @@ window.initializeServiceWorker = async function(){
 			await navigator.serviceWorker.ready;
 			// Reload the page to allow the service worker to intercept requests
 			if (!navigator.serviceWorker.controller) {
+			  debugger;
 			  // Service worker has just been installed, reload the page
 			  window.location.reload();
 			  throw new Error('Reload the page to allow the service worker to intercept requests.')

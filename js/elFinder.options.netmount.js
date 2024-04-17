@@ -12,6 +12,13 @@ elFinder.prototype._options.commandsOptions.netmount = {
 			prefix    : $('<input type="text" value="" class="elfinder-input-optional"/>')
 		}
 	},
+	hyphafs: {
+		name: 'Hypha File System Service',
+		inputs: {
+			server  : $('<input type="text" placeholder="https://ai.imjoy.io" value=""/>'),
+			serviceId: $('<input type="text" placeholder="Service ID" value="hypha-fs"/>'),
+		}
+	},
 	ftp: {
 		name : 'FTP',
 		inputs: {

@@ -2,14 +2,33 @@ import * as BrowserFS from 'browserfs';
 import mime from 'mime';
 import { intersection, each } from 'underscore';
 import Jimp from 'jimp';
-import lz from 'lzutf8';
 import JSZip from 'jszip';
 import contentDisposition from 'content-disposition';
 import S3FS from "./s3";
+import { AsyncFileSystem } from  './asyncfs';
+globalThis.window = globalThis;
+import { hyphaWebsocketClient } from "imjoy-rpc";
 
 const ArrayBufferView = Object.getPrototypeOf(
 	Object.getPrototypeOf(new Uint8Array())
 ).constructor;
+
+function encodeBase64(data) {
+	return btoa(data)
+      .replace(/=+$/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '.');
+}
+
+function base64AddPadding(str) {
+	return str + Array((4 - str.length % 4) % 4 + 1).join('=');
+}
+
+function decodeBase64(base64Url) {
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/').replace(/\./g, '=');
+    return atob(base64AddPadding(base64));
+}
 
 function patchFs() {
 	const _fs = BrowserFS.BFSRequire("fs");
@@ -551,8 +570,61 @@ api.netmount = function (opts, res) {
 
 				}
 			);
-		} else {
-			reject(`Invalid S3 URI: ${opts.host}`);
+		}
+		else if(opts.host.startsWith('http') && opts.host.includes('/services/')) {
+			// opts.host = "https://ai.imjoy.io/YkKKEiAcMpGYSACcUZ5Q8z/services/hypha-fs/""
+			// extract server_url and serviceId
+			// serviceId should be 'YkKKEiAcMpGYSACcUZ5Q8z/*:hypha-fs'
+			const url = new URL(opts.host);
+			const server_url = url.origin;
+			const workspace = opts.host.replace(server_url, '').split('/services/')[0].replace(/\//g, '');
+			const serviceId = workspace + "/" + url.pathname.split('/services/')[1].replace(/\//g, '');
+			const token = url.searchParams.get('token');
+			console.log('Connecting to Hypha File System Service at', server_url, serviceId, token)
+			const mountedPath = path.join("/", serviceId);
+			hyphaWebsocketClient.connectToServer({
+				server_url: server_url,
+				token: token
+			  }).then(async (server)=>{
+				try {
+					const fsAPI = await server.getService(serviceId)
+					const afs = new AsyncFileSystem(fsAPI);
+					console.log(fsAPI)
+					const _fs = BrowserFS.BFSRequire("fs");
+					const rootFs = _fs.getRootFS();
+					
+					if (rootFs.mntMap[mountedPath]) {
+						// already mounted
+						rootFs.umount(mountedPath);
+						console.warn(`Already mounted: ${mountedPath}, umounting...`);
+					}
+					rootFs.mount(mountedPath, afs)
+					// update fs
+					fs = patchFs();
+					addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 });
+					console.log('Mounted Hypha File System Service at', mountedPath);
+				}
+				catch (e) {
+					reject(e);
+					return;
+				}
+				setTimeout(() => {
+					_private.info(mountedPath).then((info) => {
+						resolve({
+							added: [
+								info
+							],
+						});
+					}).catch((e) => {
+						reject(e);
+					});
+				}, 10);
+			  }).catch((e)=>{
+				reject(e);
+			  })
+		}
+		else {
+			reject(`Invalid File System URI: ${opts.host}`);
 		}
 
 	})
@@ -1073,10 +1145,6 @@ _private.compress = async function (files, dest) {
 	return true
 }
 
-function base64AddPadding(str) {
-	return str + Array((4 - str.length % 4) % 4 + 1).join('=');
-}
-
 _private.decode = function (dir) {
 	var root, code, name, volume;
 	if (!dir || dir.length < 4) throw Error('Invalid Path');
@@ -1088,9 +1156,7 @@ _private.decode = function (dir) {
 		.replace(/_/g, '/')
 		.replace(/\./g, '=');
 
-	relative = lz.decompress(base64AddPadding(relative), {
-		inputEncoding: "Base64"
-	});
+	relative = decodeBase64(relative);
 	name = path.basename(relative);
 	// root might be undefined when volume is not mounted
 	root = config.volumes[volume];
@@ -1106,13 +1172,7 @@ _private.decode = function (dir) {
 //Used by _private.info, api.opne, api.tmb, api.zipdl
 _private.encode = function (dir) {
 	var info = _private.parse(dir);
-	var relative = lz.compress(info.path, {
-		outputEncoding: "Base64"
-	})
-		.replace(/=+$/g, '')
-		.replace(/\+/g, '-')
-		.replace(/\//g, '_')
-		.replace(/=/g, '.');
+	var relative = encodeBase64(info.path);
 	return 'v' + info.volume + '_' + relative;
 }
 

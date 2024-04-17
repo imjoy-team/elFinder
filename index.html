@@ -86,12 +86,24 @@
 						require(['imjoyLoader'], function (imjoyLoader) {
 							function mount(host) {
 								return new Promise((resolve, reject) => {
-									fm.request({
-										data: {
+									let data = null
+									
+									if(host.startsWith("s3://")){
+										data = {
 											cmd: 'netmount',
 											protocol: 's3',
 											host,
-										},
+										}
+									}
+									else if(host.startsWith("http") && host.includes("/services/")){
+										data = {
+											cmd: 'netmount',
+											protocol: 'hyphafs',
+											host,
+										}
+									}
+									fm.request({
+										data,
 										preventFail: true,
 										notify: { type: 'netmount', cnt: 1, hideCnt: true }
 									}).done(function (data) {
