@@ -48,7 +48,7 @@
     "console-browserify": "^1.2.0",
     "content-disposition": "^0.5.4",
     "https-browserify": "^1.0.0",
-    "imjoy-rpc": "^0.5.48-post1",
+    "hypha-rpc": "^0.20.52",
     "jimp": "^0.16.13",
     "jszip": "^3.8.0",
     "lzutf8": "^0.6.0",

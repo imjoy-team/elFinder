@@ -102,6 +102,9 @@
 											host,
 										}
 									}
+									if (!data) {
+										return reject(new Error('Invalid host format'));
+									}
 									fm.request({
 										data,
 										preventFail: true,
@@ -109,14 +112,8 @@
 									}).done(function (data) {
 										var pdir;
 										if (data.added && data.added.length) {
-											if (data.added[0].phash) {
-												if (pdir = fm.file(data.added[0].phash)) {
-													if (!pdir.dirs) {
-														pdir.dirs = 1;
-														fm.change({ changed: [pdir] });
-													}
-												}
-											}
+											debugger;
+											// Just mount but don't automatically open/download
 											fm.one('netmountdone', function () {
 												fm.exec('open', data.added[0].hash);
 												fm.one('opendone', function () {
@@ -214,8 +211,34 @@
 								// get the a list of query `mount` values and mount them
 								const query = new URLSearchParams(window.location.search);
 								const mounts = query.getAll('mount')
-								for (const host of mounts) {
-									mount(host).catch(console.error);
+								if(mounts.length > 0) {
+									// Wait for a short delay to ensure elFinder is fully initialized
+									setTimeout(() => {
+										Promise.all(mounts.map(host => {
+											if(!host) return;
+											let data = null;
+											if(host.startsWith("s3://")){
+												data = {
+													cmd: 'netmount',
+													protocol: 's3',
+													host,
+												}
+											}
+											else if(host.startsWith("http") && host.includes("/services/")){
+												data = {
+													cmd: 'netmount',
+													protocol: 'hyphafs',
+													host,
+												}
+											}
+											if(!data) return;
+											return fm.request({
+												data,
+												preventFail: true,
+												notify: { type: 'netmount', cnt: 1, hideCnt: true }
+											});
+										})).catch(console.error);
+									}, 1000);
 								}
 							}
 						})

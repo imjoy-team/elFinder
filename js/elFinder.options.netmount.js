@@ -5,18 +5,17 @@
  */
 
 elFinder.prototype._options.commandsOptions.netmount = {
+	hyphafs: {
+		name: 'Hypha',
+		inputs: {
+			host  : $('<input type="text" placeholder="https://hypha.aicell.io/ws-user-anonymouz-flossy-spoonbill-28623986/services/KobNLFfoSN7zZEN8Yr7LU7:async-file-service" value="https://hypha.aicell.io/ws-user-anonymouz-flossy-spoonbill-28623986/services/KobNLFfoSN7zZEN8Yr7LU7:async-file-service"/>')
+		}
+	},
 	s3: {
 		name : 'S3',
 		inputs: {
 			host     : $('<input type="text" placeholder="s3://" value=""/>'),
 			prefix    : $('<input type="text" value="" class="elfinder-input-optional"/>')
-		}
-	},
-	hyphafs: {
-		name: 'Hypha File System Service',
-		inputs: {
-			server  : $('<input type="text" placeholder="https://ai.imjoy.io" value=""/>'),
-			serviceId: $('<input type="text" placeholder="Service ID" value="hypha-fs"/>'),
 		}
 	},
 	ftp: {

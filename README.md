@@ -92,9 +92,9 @@ api.export({"setup": setup})
 As a more complete example, you can use it manage files in the [Hypha App Engine](https://ha.amun.ai/).
 ```python
 from imjoy_rpc import api
-from imjoy_rpc.hypha import login, connect_to_server
+from hypha_rpc import login, connect_to_server
 
-SERVER_URL = "https://ai.imjoy.io"
+SERVER_URL = "https://hypha.aicell.io"
 
 # To login, you need to click the url printed and login with your account
 token = await login({"server_url": SERVER_URL})

@@ -7,7 +7,7 @@ import contentDisposition from 'content-disposition';
 import S3FS from "./s3";
 import { AsyncFileSystem } from  './asyncfs';
 globalThis.window = globalThis;
-import { hyphaWebsocketClient } from "imjoy-rpc";
+import { hyphaWebsocketClient } from "hypha-rpc";
 
 const ArrayBufferView = Object.getPrototypeOf(
 	Object.getPrototypeOf(new Uint8Array())
@@ -125,7 +125,7 @@ const config = {
 	}
 }
 
-function addNetworkVolume(mountPath, permissions) {
+function addNetworkVolume(mountPath, permissions, driver) {
 	// remove the item from config.roots based on the mountPath
 	const volume = config.roots.findIndex((root) => root.path === mountPath);
 	if (volume >= 0) {
@@ -136,7 +136,8 @@ function addNetworkVolume(mountPath, permissions) {
 	config.roots.push({
 		url: `${rootURL}fs${mountPath}/`,
 		path: mountPath,
-		permissions
+		permissions,
+		driver
 	});
 	config.volumes.push(mountPath)
 	config.volumeicons.push('elfinder-navbar-root-network')
@@ -401,9 +402,10 @@ api.duplicate = function (opt) {
 
 api.file = async function (opts, res) {
 	const target = _private.decode(opts.target);
-	const path = target.absolutePath;
-	const size = (await api.fs.lstat(path)).size
-	const mime = _private.getMime(path);
+	const volumeInfo = config.roots[target.volume];
+	const filePath = target.absolutePath;
+	const size = (await api.fs.lstat(filePath)).size
+	const mime = _private.getMime(filePath);
 	const headers = { 'Content-Type': mime }
 	if (opts.download) {
 		headers['Content-Disposition'] = contentDisposition(target.name);
@@ -412,7 +414,11 @@ api.file = async function (opts, res) {
 		headers['Content-Disposition'] = 'inline'
 	}
 	if (!opts.range) headers["Content-Length"] = `${size}`
-	return { file: path, size, chunkSize: config.chunkSize, headers, range: opts.range }
+
+	// For both Hypha and S3, read the file and return blob data directly
+	const content = await fs.readFile(filePath);
+	const blob = new Blob([content], { type: mime });
+	return { blob: blob, headers: headers };
 }
 
 api.get = function (opts, res) {
@@ -548,7 +554,7 @@ api.netmount = function (opts, res) {
 						rootFs.mount(mountedPath, newFs)
 						// update fs
 						fs = patchFs();
-						addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 });
+						addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 }, 's3');
 						console.log('Mounted S3 bucket at', mountedPath);
 					}
 					catch (e) {
@@ -572,7 +578,6 @@ api.netmount = function (opts, res) {
 			);
 		}
 		else if(opts.host.startsWith('http') && opts.host.includes('/services/')) {
-			// opts.host = "https://ai.imjoy.io/YkKKEiAcMpGYSACcUZ5Q8z/services/hypha-fs/""
 			// extract server_url and serviceId
 			// serviceId should be 'YkKKEiAcMpGYSACcUZ5Q8z/*:hypha-fs'
 			const url = new URL(opts.host);
@@ -581,47 +586,66 @@ api.netmount = function (opts, res) {
 			const serviceId = workspace + "/" + url.pathname.split('/services/')[1].replace(/\//g, '');
 			const token = url.searchParams.get('token');
 			console.log('Connecting to Hypha File System Service at', server_url, serviceId, token)
-			const mountedPath = path.join("/", serviceId);
+			
 			hyphaWebsocketClient.connectToServer({
 				server_url: server_url,
 				token: token
-			  }).then(async (server)=>{
+			}).then(async (server)=>{
 				try {
+					const mountedPath = "/" + Math.random().toString(36).substring(2, 15)
 					const fsAPI = await server.getService(serviceId)
-					const afs = new AsyncFileSystem(fsAPI);
-					console.log(fsAPI)
-					const _fs = BrowserFS.BFSRequire("fs");
-					const rootFs = _fs.getRootFS();
-					
-					if (rootFs.mntMap[mountedPath]) {
-						// already mounted
-						rootFs.umount(mountedPath);
-						console.warn(`Already mounted: ${mountedPath}, umounting...`);
-					}
-					rootFs.mount(mountedPath, afs)
-					// update fs
-					fs = patchFs();
-					addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 });
-					console.log('Mounted Hypha File System Service at', mountedPath);
+					console.log('Got Hypha File System API:', fsAPI)
+
+					AsyncFileSystem.Create({
+						fileSystemId: serviceId,
+						fsAPI: fsAPI
+					}, async (error, afs) => {
+						if (error || !afs) {
+							console.error('Failed to create AsyncFileSystem:', error)
+							reject(error)
+							return
+						}
+
+						try {
+							const _fs = BrowserFS.BFSRequire("fs");
+							const rootFs = _fs.getRootFS();
+							
+							if (rootFs.mntMap[mountedPath]) {
+								// already mounted
+								rootFs.umount(mountedPath);
+								console.warn(`Already mounted: ${mountedPath}, umounting...`);
+							}
+							rootFs.mount(mountedPath, afs)
+							// update fs
+							fs = patchFs();
+							addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 }, 'hyphafs');
+							console.log('Mounted Hypha File System Service at', mountedPath);
+						
+
+							setTimeout(() => {
+								_private.info(mountedPath).then((info) => {
+									resolve({
+										added: [info],
+									});
+								}).catch((e) => {
+									reject(e);
+								});
+							}, 100);
+						}
+						catch (e) {
+							console.error('Failed to mount Hypha File System:', e)
+							reject(e);
+						}
+					});
 				}
 				catch (e) {
+					console.error('Failed to get Hypha File System service:', e)
 					reject(e);
-					return;
 				}
-				setTimeout(() => {
-					_private.info(mountedPath).then((info) => {
-						resolve({
-							added: [
-								info
-							],
-						});
-					}).catch((e) => {
-						reject(e);
-					});
-				}, 10);
-			  }).catch((e)=>{
+			}).catch((e)=>{
+				console.error('Failed to connect to Hypha server:', e)
 				reject(e);
-			  })
+			})
 		}
 		else {
 			reject(`Invalid File System URI: ${opts.host}`);
@@ -632,7 +656,7 @@ api.netmount = function (opts, res) {
 api.open = async function (opts, res) {
 	const data = {
 		init: opts.init,
-		netDrivers: ["s3"],
+		netDrivers: ["s3", "hyphafs"],
 		uplMaxFile: 1000,
 		uplMaxSize: "102400.0M"
 	};
@@ -1217,6 +1241,7 @@ _private.info = function (p) {
 				// if (parent == root) parent = parent + path.sep;
 				r.phash = _private.encode(parent);
 			} else {
+				const rootConfig = config.roots[info.volume];
 				r.options = {
 					disabled: config.disabled,
 					archivers: {
@@ -1225,7 +1250,8 @@ _private.info = function (p) {
 							'application/zip': 'zip'
 						}
 					},
-					url: config.roots[info.volume].url
+					// Use root path for hyphafs, otherwise use the default connector URL
+					url: rootConfig.driver === 'hyphafs' ? rootConfig.path : rootConfig.url
 				}
 				if (config.volumeicons[info.volume]) {
 					r.options.csscls = config.volumeicons[info.volume];
