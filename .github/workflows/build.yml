@@ -19,15 +19,15 @@ jobs:
         node-version: [18.12.0]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
     - run: npm run build
     - name: Save build output
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
         name: built-output
         path: ./elfinder_client
@@ -38,7 +38,7 @@ jobs:
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Load saved build output
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v4
         with:
           name: built-output
           path: ./elfinder_client
