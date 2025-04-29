@@ -338,11 +338,11 @@ export class ArtifactFileSystem extends BaseFileSystem {
 
         this.artifactManager = config.artifactManager;
         this.artifactId = config.artifactId;
-        this._rkwargs = config._rkwargs || false;
         this._fileCache = new Map(); // Cache file stats by path
         this._directoryCache = new Map(); // Cache directory existence
         this.isCollection = false;
         this.childArtifacts = null;
+        this.readOnly = config.readOnly || true;
     }
 
     /**
@@ -403,7 +403,7 @@ export class ArtifactFileSystem extends BaseFileSystem {
     }
 
     isReadOnly() {
-        return true; // This file system is read-only
+        return this.readOnly;
     }
 
     supportsSymlinks() {
@@ -699,7 +699,43 @@ export class ArtifactFileSystem extends BaseFileSystem {
     // These methods are required but will return errors for write operations
     
     async unlink(p, cb) {
-        cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        console.debug('ArtifactFileSystem.unlink', { path: p });
+        try {
+            const normalizedPath = this._normalizePath(p);
+            
+            // Check if it's a directory
+            const isDirectory = await this._isDirectory(normalizedPath);
+            if (isDirectory) {
+                // For directories, we need to recursively remove all files
+                const files = await this._getDirectoryListing(normalizedPath);
+                for (const file of files) {
+                    if (file.type === 'file') {
+                        const filePath = normalizedPath ? `${normalizedPath}/${file.name}` : file.name;
+                        await this.artifactManager.remove_file(this.artifactId, filePath);
+                    } else if (file.type === 'directory') {
+                        // Recursively remove files in subdirectories
+                        const subPath = normalizedPath ? `${normalizedPath}/${file.name}` : file.name;
+                        await this.unlink(subPath, (err) => {
+                            if (err) throw err;
+                        });
+                    }
+                }
+                cb(null);
+            } else {
+                // For single files, just remove the file
+                await this.artifactManager.remove_file(this.artifactId, normalizedPath);
+                // Clear the file from cache
+                this._fileCache.delete(normalizedPath);
+                cb(null);
+            }
+        } catch (err) {
+            console.error('ArtifactFileSystem.unlink - error', err);
+            if (err.message === "Artifact must be in staging mode.") {
+                cb(new ApiError(ErrorCode.EPERM, "Cannot remove file: artifact must be in staging mode"));
+            } else {
+                cb(convertError(err));
+            }
+        }
     }
 
     async rmdir(p, cb) {

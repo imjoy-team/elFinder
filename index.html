@@ -85,6 +85,7 @@
 					fm.bind('init', function () {
 						require(['imjoyLoader'], function (imjoyLoader) {
 							function mount(host, opts) {
+								opts = opts || {};
 								return new Promise((resolve, reject) => {
 									let data = null
 									
@@ -122,6 +123,8 @@
 										notify: { type: 'netmount', cnt: 1, hideCnt: true }
 									}).done(function (data) {				
 										if (data.added && data.added.length) {
+											// Return the mounted path
+											const mountedPath = data.added[0].path;
 											// Just mount but don't automatically open/download
 											fm.one('netmountdone', function () {
 												fm.exec('open', data.added[0].hash);
@@ -129,8 +132,10 @@
 													data.toast && fm.toast(data.toast);
 												});
 											});
+											resolve(mountedPath);
+										} else {
+											resolve(null);
 										}
-										resolve();
 									})
 										.fail(reject)
 								})
@@ -159,13 +164,28 @@
 										api.log('elFinder plugin initialized.')
 									}
 									async function close() {
-										await api.close()
+										if(api.close) {
+											await api.close()
+										}
+										else{
+										    console.warn('elFinder plugin close function not found')
+										}
 									}
 									async function show() {
-										await api.show()
+										if(api.show) {
+											await api.show()
+										}
+										else{
+											console.warn('elFinder plugin show function not found')
+										}
 									}
 									async function hide() {
-										await api.hide()
+										if(api.hide) {
+											await api.hide()
+										}
+										else{
+											console.warn('elFinder plugin hide function not found')
+										}
 									}
 									function getSelections(config) {
 										return new Promise((resolve) => {
@@ -211,7 +231,48 @@
 										close,
 										hide,
 										mount,
-										getSelections
+										getSelections,
+										umount: function(path) {
+											return new Promise((resolve, reject) => {
+												// Find the volume by path
+												const volumes = fm.files();
+												let targetHash = null;
+												
+												// Look through all files to find the volume root with matching path
+												for (const hash in volumes) {
+													const file = volumes[hash];
+													if (file.path === path && file.mime === 'directory' && file.netkey) {
+														targetHash = file.hash;
+														break;
+													}
+												}
+												
+												if (!targetHash) {
+													reject(new Error('Volume not found for path: ' + path));
+													return;
+												}
+												
+												fm.request({
+													data: {
+														cmd: 'netmount',
+														protocol: 'netunmount',
+														user: targetHash,
+														host: 'dummy',
+														pass: 'dum'
+													},
+													preventFail: true,
+													notify: { type: 'netunmount', cnt: 1, hideCnt: true }
+												}).done(function (data) {
+													if (data.removed && data.removed.length) {
+														fm.one('netunmountdone', function () {
+															resolve();
+														});
+													} else {
+														resolve();
+													}
+												}).fail(reject);
+											});
+										}
 									});
 								})
 							}
@@ -238,6 +299,8 @@
 													cmd: 'netmount',
 													protocol: 'hyphafs',
 													host,
+													workspace: query.get('workspace'),
+													token: query.get('token'),
 												}
 											}
 											else if(host.startsWith("http") && host.includes("/artifacts/")){
@@ -245,6 +308,8 @@
 													cmd: 'netmount',
 													protocol: 'hypha_artifacts',
 													host,
+													workspace: query.get('workspace'),
+													token: query.get('token'),
 												}
 											}
 											if(!data) return;

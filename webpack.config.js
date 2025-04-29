@@ -164,10 +164,12 @@ ${getCssFiles().map(file =>
       'service-worker': path.join(__dirname, 'src/service-worker.js'),
     },
     mode: argv.mode || 'development',
-    devtool: isDev ? "source-map" : false,
+    devtool: isDev ? 'source-map' : false,
     output: {
       filename: '[name].js',
       path: outputDir,
+      sourceMapFilename: '[file].map',
+      devtoolModuleFilenameTemplate: 'webpack://[namespace]/[resource-path]?[loaders]'
     },
     devServer: {
       static: {
@@ -204,7 +206,8 @@ ${getCssFiles().map(file =>
           use: {
             loader: 'babel-loader',
             options: {
-              presets: ['@babel/preset-env']
+              presets: ['@babel/preset-env'],
+              sourceMaps: true
             }
           }
         },

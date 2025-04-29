@@ -499,3 +499,5 @@ async function cacheAll() {
 }
 
 console.log(`Service worker file system is running (${packageInfo.version})`)
+
+//# sourceMappingURL=service-worker.js.map

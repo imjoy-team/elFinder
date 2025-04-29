@@ -162,15 +162,20 @@ function addNetworkVolume(mountPath, permissions, driver) {
 		counter++;
 	}
 	
+	// Generate a unique netkey
+	const netkey = `${driver}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+	
 	// Add to config.volumes first to ensure path decoding works
 	config.volumes.push(finalPath);
 	config.roots.push({
 		url: `${rootURL}fs${finalPath}/`,
 		path: finalPath,
 		permissions,
-		driver
+		driver,
+		netkey
 	});
 	config.volumeicons.push('elfinder-navbar-root-network')
+	return netkey;
 }
 
 let fs, path;
@@ -536,6 +541,51 @@ api.mkdir = async function (opts, res) {
 
 api.netmount = function (opts, res) {
 	return new Promise(function (resolve, reject) {
+		// Handle unmount request
+		if (opts.protocol === "netunmount") {
+			try {
+				const volumeInfo = _private.decode(opts.user);
+				if (!volumeInfo) {
+					reject('Invalid volume');
+					return;
+				}
+				
+				const _fs = BrowserFS.BFSRequire("fs");
+				const rootFs = _fs.getRootFS();
+				
+				// Unmount the filesystem
+				if (rootFs.mntMap[volumeInfo.dir]) {
+					rootFs.umount(volumeInfo.dir);
+					
+					// Remove from config
+					const mountIndex = config.roots.findIndex(r => r.path === volumeInfo.dir);
+					if (mountIndex !== -1) {
+						// Store the removed volume hash for response
+						const removedHash = _private.encode(volumeInfo.dir);
+						
+						// Remove from all config arrays
+						config.roots.splice(mountIndex, 1);
+						config.volumes.splice(mountIndex, 1);
+						config.volumeicons.splice(mountIndex, 1);
+						
+						// Update fs reference
+						fs = patchFs();
+						
+						resolve({
+							removed: [removedHash]
+						});
+						return;
+					}
+				}
+				reject('Volume not mounted');
+				return;
+			} catch (error) {
+				console.error('Failed to unmount volume:', error);
+				reject(error);
+				return;
+			}
+		}
+
 		// S3 URI Example: s3://accessKey:secretKey@endpoint/bucket/prefix
 		// Extract access key, secret key, endpoint, bucket, and object from S3 URI
 		const matchResult = opts.host.match(
@@ -593,24 +643,26 @@ api.netmount = function (opts, res) {
 						// update fs
 						fs = patchFs();
 						console.log('Mounted S3 bucket at', mountedPath);
+						// Add to volumes first
+						const netkey = addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 }, 's3');
+						setTimeout(() => {
+							_private.info(mountedPath).then((info) => {
+								// Ensure the info has the netkey
+								info.netkey = netkey;
+								resolve({
+									added: [info],
+								});
+							}).catch((e) => {
+								reject(e);
+							});
+						}, 10);
+
+
 					}
 					catch (e) {
 						reject(e);
 						return;
 					}
-					setTimeout(() => {
-						_private.info(mountedPath).then((info) => {
-							resolve({
-								added: [
-									info
-								],
-							});
-						}).catch((e) => {
-							reject(e);
-						});
-					}, 10);
-
-
 				}
 			);
 		}
@@ -624,8 +676,8 @@ api.netmount = function (opts, res) {
 			
 			hyphaWebsocketClient.connectToServer({
 				server_url: server_url,
-				workspace: opts.workspace || url.searchParams.get('workspace'),
-				token: opts.token || url.searchParams.get('token')
+				workspace: opts.workspace,
+				token: opts.token
 			}).then(async (server)=>{
 				try {
 					const mountedPath = `/${workspace}:${serviceId.split('/')[1]}`
@@ -658,10 +710,11 @@ api.netmount = function (opts, res) {
 							console.log('Mounted Hypha File System Service at', mountedPath);
 						
 							// Add to volumes first
-							addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 }, 'hyphafs');
+							const netkey = addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 }, 'hyphafs');
 
 							setTimeout(() => {
 								_private.info(mountedPath).then((info) => {
+									info.netkey = netkey;
 									resolve({
 										added: [info],
 									});
@@ -701,14 +754,14 @@ api.netmount = function (opts, res) {
 			const workspace = parts[0].replace(/^\//, ''); // Remove leading slash
 			const artifactAlias = parts[1].replace(/\/$/, ''); // Remove trailing slash
 			const fullArtifactId = `${workspace}/${artifactAlias}`;
+			const token = opts.token;
+			console.log('Extracted artifact info:', { serverUrl, workspace, artifactAlias, fullArtifactId, token });
 			
-			console.log('Extracted artifact info:', { serverUrl, workspace, artifactAlias, fullArtifactId });
-
 			// Connect to Hypha server
 			hyphaWebsocketClient.connectToServer({
 				server_url: serverUrl,
-				workspace:  opts.workspace || url.searchParams.get('workspace'),
-				token: opts.token || url.searchParams.get('token')
+				workspace:  opts.workspace,
+				token
 			}).then(async (server) => {
 				try {
 					const mountedPath = `/${workspace}:${artifactAlias}`
@@ -721,6 +774,7 @@ api.netmount = function (opts, res) {
 						baseUrl: opts.host,
 						artifactManager: artifactManager,
 						artifactId: fullArtifactId,
+						readOnly: token ? false : true,
 						_rkwargs: true // Enable Python kwargs simulation
 					}, async (error, afs) => {
 						if (error || !afs) {
@@ -733,20 +787,34 @@ api.netmount = function (opts, res) {
 							const _fs = BrowserFS.BFSRequire("fs");
 							const rootFs = _fs.getRootFS();
 							
+							// Check if already mounted and handle remounting
 							if (rootFs.mntMap[mountedPath]) {
-								// already mounted
-								rootFs.umount(mountedPath);
-								console.warn(`Already mounted: ${mountedPath}, umounting...`);
+								try {
+									console.log(`Unmounting existing path: ${mountedPath}`);
+									rootFs.umount(mountedPath);
+									// Remove from config.roots and config.volumes
+									const mountIndex = config.roots.findIndex(r => r.path === mountedPath);
+									if (mountIndex !== -1) {
+										config.roots.splice(mountIndex, 1);
+										config.volumes.splice(mountIndex, 1);
+										config.volumeicons.splice(mountIndex, 1);
+									}
+								} catch (unmountError) {
+									console.error('Failed to unmount existing path:', unmountError);
+									// Continue with mounting even if unmount fails
+								}
 							}
+
 							rootFs.mount(mountedPath, afs);
 							// update fs
 							fs = patchFs();
 							console.log('Mounted Hypha Artifacts at', mountedPath);
 							// Add to volumes first
-							addNetworkVolume(mountedPath, { read: 1, write: 0, locked: 1 }, 'hypha_artifacts');
+							const netkey = addNetworkVolume(mountedPath, { read: 1, write: 0, locked: 1 }, 'hypha_artifacts');
 
 							setTimeout(() => {
 								_private.info(mountedPath).then((info) => {
+									info.netkey = netkey;
 									resolve({
 										added: [info],
 									});
@@ -1342,6 +1410,7 @@ _private.info = function (p) {
 				volumeid: 'v' + info.volume + '_',
 				path: p, // expose real path
 			}
+
 			if (r.mime && r.mime.indexOf('image/') == 0) {
 				var filename = _private.encode(p);
 				var tmbPath = path.join(config.tmbroot, filename + ".png");
@@ -1359,7 +1428,6 @@ _private.info = function (p) {
 
 			if (!info.isRoot) {
 				var parent = path.dirname(p);
-				// if (parent == root) parent = parent + path.sep;
 				r.phash = _private.encode(parent);
 			} else {
 				const rootConfig = config.roots[info.volume];
@@ -1376,6 +1444,10 @@ _private.info = function (p) {
 				}
 				if (config.volumeicons[info.volume]) {
 					r.options.csscls = config.volumeicons[info.volume];
+				}
+				// Add netkey if this is a network volume
+				if (rootConfig && rootConfig.netkey) {
+					r.netkey = rootConfig.netkey;
 				}
 			}
 			var acl = config.acl(p);

@@ -809,7 +809,7 @@ elFinder.prototype._options = {
 		// toolbar configuration
 		toolbar : [
 			['home', 'back', 'forward', 'up', 'reload'],
-			['netmount'],
+			['netmount', 'netunmount'],
 			['mkdir', 'mkfile', 'upload'],
 			['open', 'download', 'getfile'],
 			['undo', 'redo'],
