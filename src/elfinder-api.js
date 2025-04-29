@@ -624,7 +624,7 @@ api.netmount = function (opts, res) {
 			
 			hyphaWebsocketClient.connectToServer({
 				server_url: server_url,
-				workspace: opts.workspace || url.searchParams.get('workspace') || workspace,
+				workspace: opts.workspace || url.searchParams.get('workspace'),
 				token: opts.token || url.searchParams.get('token')
 			}).then(async (server)=>{
 				try {
@@ -707,7 +707,7 @@ api.netmount = function (opts, res) {
 			// Connect to Hypha server
 			hyphaWebsocketClient.connectToServer({
 				server_url: serverUrl,
-				workspace:  opts.workspace || url.searchParams.get('workspace') || workspace,
+				workspace:  opts.workspace || url.searchParams.get('workspace'),
 				token: opts.token || url.searchParams.get('token')
 			}).then(async (server) => {
 				try {
