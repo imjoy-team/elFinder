@@ -4,8 +4,9 @@
   "description": "File manager for web",
   "main": "Jakefile.js",
   "scripts": {
-    "build": "mkdir -p ./elfinder_client && rm -rf ./elfinder_client/* && jake -C ./elfinder_client elfinder && webpack --config webpack.config.js --mode production --progress",
-    "serve": "mkdir -p ./elfinder_client && rm -rf ./elfinder_client/* && jake -C ./elfinder_client elfinder && webpack serve --config webpack.config.js --mode development --progress --hot"
+    "build": "webpack --config webpack.config.js --mode production --progress",
+    "build-minimal": "webpack --config webpack.config.js --mode production --progress --env minimal=true",
+    "serve": "webpack serve --config webpack.config.js --mode development --progress --hot"
   },
   "repository": {
     "type": "git",
@@ -30,9 +31,13 @@
     "@babel/preset-env": "^7.22.5",
     "babel-loader": "^8.3.0",
     "copy-webpack-plugin": "^6.2.1",
+    "css-loader": "^6.8.1",
+    "css-minimizer-webpack-plugin": "^5.0.1",
     "csso": "<2.0.0",
-    "jake": "~8.0.12",
+    "mini-css-extract-plugin": "^2.7.6",
     "nodemon": "^2.0.20",
+    "terser": "^5.20.0",
+    "terser-webpack-plugin": "^5.3.9",
     "uglify-js": "^3.13.10",
     "webpack": "^5",
     "webpack-cli": "^4",

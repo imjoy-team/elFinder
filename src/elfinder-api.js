@@ -6,8 +6,24 @@ import JSZip from 'jszip';
 import contentDisposition from 'content-disposition';
 import S3FS from "./s3";
 import { AsyncFileSystem } from  './asyncfs';
+import { ArtifactFileSystem } from "./artifactFs";
+import { handleHyphaArtifacts } from "./fs-handlers/hypha-artifacts-handler";
+import { handleHyphaFs } from "./fs-handlers/hypha-fs-handler";
+import { handleS3 } from "./fs-handlers/s3-handler";
 globalThis.window = globalThis;
 import { hyphaWebsocketClient } from "hypha-rpc";
+import elFinderContents from './elfinder.contents.js';
+
+// Create a local elFinder object for the api with the necessary structure
+const elFinder = function() {};
+elFinder.prototype = {
+	version: elFinderContents.version,
+	commands: {
+		netmount: {
+			drivers: elFinderContents.netmountDrivers
+		}
+	}
+};
 
 const ArrayBufferView = Object.getPrototypeOf(
 	Object.getPrototypeOf(new Uint8Array())
@@ -15,10 +31,10 @@ const ArrayBufferView = Object.getPrototypeOf(
 
 function encodeBase64(data) {
 	return btoa(data)
-      .replace(/=+$/g, '')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '.');
+		.replace(/=+$/g, '')
+		.replace(/\+/g, '-')
+		.replace(/\//g, '_')
+		.replace(/=/g, '.');
 }
 
 function base64AddPadding(str) {
@@ -26,14 +42,25 @@ function base64AddPadding(str) {
 }
 
 function decodeBase64(base64Url) {
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/').replace(/\./g, '=');
-    return atob(base64AddPadding(base64));
+	const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/').replace(/\./g, '=');
+	return atob(base64AddPadding(base64));
+}
+
+async function jimpRead(data) {
+	const buffer = BrowserFS.BFSRequire("buffer");
+	if (data instanceof ArrayBuffer) {
+		data = new Uint8Array(data);
+	}
+	if (data instanceof ArrayBufferView) {
+		data = data.buffer;
+	}
+	data = buffer.Buffer(data);
+	return await Jimp.read(data);
 }
 
 function patchFs() {
 	const _fs = BrowserFS.BFSRequire("fs");
 	const buffer = BrowserFS.BFSRequire("buffer");
-
 	//convert arraybuffer to Buffer
 	var convert = function (name, fn) {
 		return function () {
@@ -126,20 +153,23 @@ const config = {
 }
 
 function addNetworkVolume(mountPath, permissions, driver) {
-	// remove the item from config.roots based on the mountPath
-	const volume = config.roots.findIndex((root) => root.path === mountPath);
-	if (volume >= 0) {
-		config.roots.splice(volume, 1);
-		config.volumes.splice(volume, 1);
-		config.volumeicons.splice(volume, 1);
+	// Check if path already exists
+	let finalPath = mountPath;
+	let counter = 1;
+	while (config.roots.some((root) => root.path === finalPath)) {
+		// If path exists, append a counter
+		finalPath = `${mountPath}-${counter}`;
+		counter++;
 	}
+	
+	// Add to config.volumes first to ensure path decoding works
+	config.volumes.push(finalPath);
 	config.roots.push({
-		url: `${rootURL}fs${mountPath}/`,
-		path: mountPath,
+		url: `${rootURL}fs${finalPath}/`,
+		path: finalPath,
 		permissions,
 		driver
 	});
-	config.volumes.push(mountPath)
 	config.volumeicons.push('elfinder-navbar-root-network')
 }
 
@@ -176,6 +206,11 @@ async function initialize(baseURL) {
 		api.fs = fs
 		api.path = path
 	})
+
+	// Register netmount protocol handlers
+	elFinder.prototype.commands.netmount.drivers.hypha_artifacts = handleHyphaArtifacts;
+	elFinder.prototype.commands.netmount.drivers.hyphafs = handleHyphaFs;
+	elFinder.prototype.commands.netmount.drivers.s3 = handleS3;
 }
 
 export function parseFile(file, chunk_callback) {
@@ -269,7 +304,7 @@ api.archive = function (opts, res) {
 api.dim = function (opts, res) {
 	return new Promise(async function (resolve, reject) {
 		var target = _private.decode(opts.target);
-		Jimp.read(await fs.readFile(target.absolutePath))
+		jimpRead(await fs.readFile(target.absolutePath))
 			.then(function (img) {
 				resolve({
 					dim: img.bitmap.width + 'x' + img.bitmap.height
@@ -417,8 +452,7 @@ api.file = async function (opts, res) {
 
 	// For both Hypha and S3, read the file and return blob data directly
 	const content = await fs.readFile(filePath);
-	const blob = new Blob([content], { type: mime });
-	return { blob: blob, headers: headers };
+	return { file: new Blob([content], { type: mime }), headers: headers };
 }
 
 api.get = function (opts, res) {
@@ -527,6 +561,10 @@ api.netmount = function (opts, res) {
 			const mappedName =
 				removeInvalidFilenameCharacters(topLevelFolder).trim();
 			const mountedPath = path.join("/", mappedName);
+
+			// Add to volumes first
+			addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 }, 's3');
+
 			S3FS.Create(
 				{
 					accessKeyId: accessKey,
@@ -554,7 +592,6 @@ api.netmount = function (opts, res) {
 						rootFs.mount(mountedPath, newFs)
 						// update fs
 						fs = patchFs();
-						addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 }, 's3');
 						console.log('Mounted S3 bucket at', mountedPath);
 					}
 					catch (e) {
@@ -579,23 +616,23 @@ api.netmount = function (opts, res) {
 		}
 		else if(opts.host.startsWith('http') && opts.host.includes('/services/')) {
 			// extract server_url and serviceId
-			// serviceId should be 'YkKKEiAcMpGYSACcUZ5Q8z/*:hypha-fs'
 			const url = new URL(opts.host);
 			const server_url = url.origin;
 			const workspace = opts.host.replace(server_url, '').split('/services/')[0].replace(/\//g, '');
 			const serviceId = workspace + "/" + url.pathname.split('/services/')[1].replace(/\//g, '');
-			const token = url.searchParams.get('token');
 			console.log('Connecting to Hypha File System Service at', server_url, serviceId, token)
 			
 			hyphaWebsocketClient.connectToServer({
 				server_url: server_url,
-				token: token
+				workspace: opts.workspace || url.searchParams.get('workspace') || workspace,
+				token: opts.token || url.searchParams.get('token')
 			}).then(async (server)=>{
 				try {
-					const mountedPath = "/" + Math.random().toString(36).substring(2, 15)
+					const mountedPath = `/${workspace}:${serviceId.split('/')[1]}`
 					const fsAPI = await server.getService(serviceId)
 					console.log('Got Hypha File System API:', fsAPI)
 
+					
 					AsyncFileSystem.Create({
 						fileSystemId: serviceId,
 						fsAPI: fsAPI
@@ -618,9 +655,10 @@ api.netmount = function (opts, res) {
 							rootFs.mount(mountedPath, afs)
 							// update fs
 							fs = patchFs();
-							addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 }, 'hyphafs');
 							console.log('Mounted Hypha File System Service at', mountedPath);
 						
+							// Add to volumes first
+							addNetworkVolume(mountedPath, { read: 1, write: 1, locked: 0 }, 'hyphafs');
 
 							setTimeout(() => {
 								_private.info(mountedPath).then((info) => {
@@ -647,6 +685,89 @@ api.netmount = function (opts, res) {
 				reject(e);
 			})
 		}
+		else if (opts.host.startsWith('http') && opts.host.includes('/artifacts/')) {
+			// This is a Hypha artifacts URL
+			console.log('Connecting to Hypha Artifacts at', opts.host);
+			
+			// Extract server URL, workspace and artifact alias from URL
+			const url = new URL(opts.host);
+			const serverUrl = url.origin;
+			const parts = url.pathname.split('/artifacts/');
+			if (parts.length !== 2) {
+				reject(new Error('Invalid artifact URL format'));
+				return;
+			}
+			
+			const workspace = parts[0].replace(/^\//, ''); // Remove leading slash
+			const artifactAlias = parts[1].replace(/\/$/, ''); // Remove trailing slash
+			const fullArtifactId = `${workspace}/${artifactAlias}`;
+			
+			console.log('Extracted artifact info:', { serverUrl, workspace, artifactAlias, fullArtifactId });
+
+			// Connect to Hypha server
+			hyphaWebsocketClient.connectToServer({
+				server_url: serverUrl,
+				workspace:  opts.workspace || url.searchParams.get('workspace') || workspace,
+				token: opts.token || url.searchParams.get('token')
+			}).then(async (server) => {
+				try {
+					const mountedPath = `/${workspace}:${artifactAlias}`
+					
+					// Get the artifact manager service
+					const artifactManager = await server.getService("public/artifact-manager");
+					console.log('Got artifact manager service');
+					// Create the ArtifactFileSystem with the artifact manager
+					ArtifactFileSystem.Create({
+						baseUrl: opts.host,
+						artifactManager: artifactManager,
+						artifactId: fullArtifactId,
+						_rkwargs: true // Enable Python kwargs simulation
+					}, async (error, afs) => {
+						if (error || !afs) {
+							console.error('Failed to create ArtifactFileSystem:', error);
+							reject(error);
+							return;
+						}
+
+						try {
+							const _fs = BrowserFS.BFSRequire("fs");
+							const rootFs = _fs.getRootFS();
+							
+							if (rootFs.mntMap[mountedPath]) {
+								// already mounted
+								rootFs.umount(mountedPath);
+								console.warn(`Already mounted: ${mountedPath}, umounting...`);
+							}
+							rootFs.mount(mountedPath, afs);
+							// update fs
+							fs = patchFs();
+							console.log('Mounted Hypha Artifacts at', mountedPath);
+							// Add to volumes first
+							addNetworkVolume(mountedPath, { read: 1, write: 0, locked: 1 }, 'hypha_artifacts');
+
+							setTimeout(() => {
+								_private.info(mountedPath).then((info) => {
+									resolve({
+										added: [info],
+									});
+								}).catch((e) => {
+									reject(e);
+								});
+							}, 100);
+						} catch (e) {
+							console.error('Failed to mount Hypha Artifacts:', e);
+							reject(e);
+						}
+					});
+				} catch (e) {
+					console.error('Failed to get artifact manager service:', e);
+					reject(e);
+				}
+			}).catch((e) => {
+				console.error('Failed to connect to Hypha server:', e);
+				reject(e);
+			});
+		}
 		else {
 			reject(`Invalid File System URI: ${opts.host}`);
 		}
@@ -656,7 +777,7 @@ api.netmount = function (opts, res) {
 api.open = async function (opts, res) {
 	const data = {
 		init: opts.init,
-		netDrivers: ["s3", "hyphafs"],
+		netDrivers: ["s3", "hyphafs", "hypha_artifacts"],
 		uplMaxFile: 1000,
 		uplMaxSize: "102400.0M"
 	};
@@ -797,7 +918,7 @@ api.rename = function (opts, res) {
 
 api.resize = async function (opts, res) {
 	const target = _private.decode(opts.target);
-	let image = await Jimp.read(await fs.readFile(target.absolutePath))
+	let image = await jimpRead(await fs.readFile(target.absolutePath))
 
 	if (opts.mode == 'resize') {
 		image = image.resize(parseInt(opts.width), parseInt(opts.height))
@@ -923,7 +1044,7 @@ async function generateThumbnail(file) {
 		// const stat = await fs.lstat(target.absolutePath);
 		// if (stat.size > 1024 * 1024 * 100) return false;
 		const buffer = await fs.readFile(file);
-		const img = await Jimp.read(buffer)
+		const img = await jimpRead(buffer)
 		const op = _private.encode(file);
 		await saveImage(img.resize(48, 48), path.join(config.tmbroot, op + ".png"))
 		return op
@@ -1345,7 +1466,6 @@ _private.tmbfile = function (filename) {
 //Used by _private.parse & config.acl
 _private.volume = function (p) {
 	for (var i = 0; i < config.volumes.length; i++) {
-		if (i > 9) return -1;
 		if (p.indexOf(config.volumes[i]) == 0) {
 			return i;
 		}

@@ -29,7 +29,24 @@ function timeout(ms) {
 
 window.initializeServiceWorker = async function(){
 	if ('serviceWorker' in navigator) {
+		const urlParams = new URLSearchParams(window.location.search);
+		const forceUpgrade = urlParams.get('upgrade') === '1';
+		
 		const controller = navigator.serviceWorker.controller;
+
+		if (forceUpgrade) {
+			// Unregister all existing service workers
+			const registrations = await navigator.serviceWorker.getRegistrations();
+			for(let registration of registrations) {
+				await registration.unregister();
+			}
+			// Remove the upgrade parameter and reload
+			urlParams.delete('upgrade');
+			const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
+			window.location.replace(newUrl);
+			return;
+		}
+
 		// Register the worker and show the list of quotations.
 		if (!controller || !controller.scriptURL.endsWith('/service-worker.js') ) {
 			navigator.serviceWorker.oncontrollerchange = function() {
@@ -44,9 +61,7 @@ window.initializeServiceWorker = async function(){
 			// Wait for the service worker to become active
 			await navigator.serviceWorker.ready;
 			// Reload the page to allow the service worker to intercept requests
-			if (!navigator.serviceWorker.controller) {
-			  debugger;
-			  // Service worker has just been installed, reload the page
+			if (!navigator.serviceWorker.controller) {			  // Service worker has just been installed, reload the page
 			  window.location.reload();
 			  throw new Error('Reload the page to allow the service worker to intercept requests.')
 			}
