@@ -31,12 +31,18 @@ elFinder.prototype.commands.imjoyplugins = function() {
 			try{
 				if(!window.imjoy) return false;
 				const api = window.imjoy.api
-				const loaders = await api.getServices({type: '#file-loader'})
-				for(let target of e.data.targets){
-					const file = self.fm.file(target);
-					for(let loader of loaders){
-						if(await loader.check(file)){
-							self.variants.push([{loader, file}, loader.name, loader.icon])
+				if(!api.listServices) {
+					// for imjoy
+					api.listServices = api.getServices
+				}
+				if(api.listServices){
+					const loaders = await api.listServices({type: '#file-loader'})
+					for(let target of e.data.targets){
+						const file = self.fm.file(target);
+						for(let loader of loaders){
+							if(await loader.check(file)){
+								self.variants.push([{loader, file}, loader.name, loader.icon])
+							}
 						}
 					}
 				}

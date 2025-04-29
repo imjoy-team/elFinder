@@ -13,7 +13,7 @@ var fs   = require('fs'),
 	ugjs = require('uglify-js'),
 	csso = require('csso');
 
-var dirmode = 0755,
+var dirmode = 0o755,
 	src = __dirname,
 	version = null,
 	files = {

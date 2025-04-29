@@ -5,6 +5,18 @@
  */
 
 elFinder.prototype._options.commandsOptions.netmount = {
+	hyphafs: {
+		name: 'Hypha',
+		inputs: {
+			host  : $('<input type="text" placeholder="https://hypha.aicell.io/ws-user-anonymouz-flossy-spoonbill-28623986/services/KobNLFfoSN7zZEN8Yr7LU7:async-file-service" value="https://hypha.aicell.io/ws-user-anonymouz-flossy-spoonbill-28623986/services/KobNLFfoSN7zZEN8Yr7LU7:async-file-service"/>')
+		}
+	},
+	hypha_artifacts: {
+		name: 'Hypha Artifacts',
+		inputs: {
+			host  : $('<input type="text" placeholder="https://hypha.aicell.io/bioimage-io/artifacts/bioimage.io" value=""/>')
+		}
+	},
 	s3: {
 		name : 'S3',
 		inputs: {

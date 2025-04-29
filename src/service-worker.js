@@ -3,6 +3,19 @@
 import { ServiceWorkerWare } from "./service-worker-ware.js"
 import { api as elfinder_api, parseFile, writeFile } from './elfinder-api.js';
 import packageInfo from '../package.json';
+import elFinderContents from './elfinder.contents.js';
+
+// Make elFinder available globally with the necessary structure
+const elFinder = function() {};
+elFinder.prototype = {
+  version: elFinderContents.version,
+  commands: {
+    netmount: {
+      drivers: elFinderContents.netmountDrivers
+    }
+  }
+};
+self.elFinder = elFinder;
 
 const baseURL = (function () {
   var tokens = (self.location + '').split('/');
@@ -486,3 +499,5 @@ async function cacheAll() {
 }
 
 console.log(`Service worker file system is running (${packageInfo.version})`)
+
+//# sourceMappingURL=service-worker.js.map

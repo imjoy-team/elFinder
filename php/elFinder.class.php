@@ -130,7 +130,8 @@ class elFinder
         'image/cgm',
         'image/svg+xml',
         'image/vnd.dxf',
-        'model/iges'
+        'model/iges',
+        'text/x-python'
     );
 
     /**
