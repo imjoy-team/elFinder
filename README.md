@@ -176,7 +176,7 @@ dataset = await artifact_manager.create(
 # Access the artifact through elFinder
 async def setup():  
     fm = await api.showDialog(
-        src="http://localhost:3000"
+        src="https://fm.imjoy.io"
     )
     await fm.mount("https://hypha.aicell.io/workspace/example-dataset", {"token": token})
 
@@ -185,12 +185,12 @@ api.export({"setup": setup})
 
 You can also access artifacts directly through the elFinder URL:
 ```
-http://localhost:3000/?mount=https://hypha.aicell.io/workspace/artifact-alias
+https://fm.imjoy.io/?mount=https://hypha.aicell.io/workspace/artifact-alias
 ```
 
 For private artifacts that require authentication, append a token:
 ```
-http://localhost:3000/?mount=https://hypha.aicell.io/workspace/artifact-alias&token=your-token
+https://fm.imjoy.io/?mount=https://hypha.aicell.io/workspace/artifact-alias&token=your-token
 ```
 
 #### Using elFinder with Artifact Manager in ImJoy
@@ -243,7 +243,7 @@ api.export({"setup": setup})
 elFinder uses a service worker for managing file operations and caching. Sometimes you may need to force the service worker to upgrade, especially after updates to the elFinder codebase. You can force an upgrade by adding the `upgrade=1` parameter to the URL:
 
 ```
-http://localhost:3000/?mount=https://hypha.aicell.io/workspace/artifact-alias&upgrade=1
+https://fm.imjoy.io/?mount=https://hypha.aicell.io/workspace/artifact-alias&upgrade=1
 ```
 
 **Note:** After adding the upgrade parameter, you may need to refresh the page a few times in your browser for the upgrade to take effect. This is because service worker updates follow a specific lifecycle and may require multiple refreshes to fully activate.
