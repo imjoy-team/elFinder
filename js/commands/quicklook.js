@@ -11,7 +11,11 @@ async function imjoyPreviews(ql, file) {
 	const preview = ql.preview
 	const fm = ql.fm;
 	const api = window.imjoy.api
-	const loaders = await api.getServices({type: '#file-preview'})
+	if(!api.listServices) {
+		// for imjoy
+		api.listServices = api.getServices
+	}
+	const loaders = await api.listServices({type: '#file-preview'})
 	function getFileUrl(file){
 		return new Promise((resolve)=>{
 			fm.openUrl(file.hash, false, (url)=>{

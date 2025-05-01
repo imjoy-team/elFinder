@@ -4,7 +4,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>ImJoy elFinder</title>
 	<style>
 		.spinner {
@@ -84,35 +84,58 @@
 					/* any bind functions etc. */
 					fm.bind('init', function () {
 						require(['imjoyLoader'], function (imjoyLoader) {
-							function mount(host) {
+							function mount(host, opts) {
+								opts = opts || {};
 								return new Promise((resolve, reject) => {
-									fm.request({
-										data: {
+									let data = null
+									
+									if(host.startsWith("s3://")){
+										data = {
 											cmd: 'netmount',
 											protocol: 's3',
 											host,
-										},
+										}
+									}
+									else if(host.startsWith("http") && host.includes("/services/")){
+										data = {
+											cmd: 'netmount',
+											protocol: 'hyphafs',
+											host,
+											workspace: opts.workspace,
+											token: opts.token,
+										}
+									}
+									else if(host.startsWith("http") && host.includes("/artifacts/")){
+										data = {
+											cmd: 'netmount',
+											protocol: 'hypha_artifacts',
+											host,
+											workspace: opts.workspace,
+											token: opts.token,
+										}
+									}
+									if (!data) {
+										return reject(new Error('Invalid host format'));
+									}
+									fm.request({
+										data,
 										preventFail: true,
 										notify: { type: 'netmount', cnt: 1, hideCnt: true }
-									}).done(function (data) {
-										var pdir;
+									}).done(function (data) {				
 										if (data.added && data.added.length) {
-											if (data.added[0].phash) {
-												if (pdir = fm.file(data.added[0].phash)) {
-													if (!pdir.dirs) {
-														pdir.dirs = 1;
-														fm.change({ changed: [pdir] });
-													}
-												}
-											}
+											// Return the mounted path
+											const mountedPath = data.added[0].path;
+											// Just mount but don't automatically open/download
 											fm.one('netmountdone', function () {
 												fm.exec('open', data.added[0].hash);
 												fm.one('opendone', function () {
 													data.toast && fm.toast(data.toast);
 												});
 											});
+											resolve(mountedPath);
+										} else {
+											resolve(null);
 										}
-										resolve();
 									})
 										.fail(reject)
 								})
@@ -141,13 +164,28 @@
 										api.log('elFinder plugin initialized.')
 									}
 									async function close() {
-										await api.close()
+										if(api.close) {
+											await api.close()
+										}
+										else{
+										    console.warn('elFinder plugin close function not found')
+										}
 									}
 									async function show() {
-										await api.show()
+										if(api.show) {
+											await api.show()
+										}
+										else{
+											console.warn('elFinder plugin show function not found')
+										}
 									}
 									async function hide() {
-										await api.hide()
+										if(api.hide) {
+											await api.hide()
+										}
+										else{
+											console.warn('elFinder plugin hide function not found')
+										}
 									}
 									function getSelections(config) {
 										return new Promise((resolve) => {
@@ -193,7 +231,48 @@
 										close,
 										hide,
 										mount,
-										getSelections
+										getSelections,
+										umount: function(path) {
+											return new Promise((resolve, reject) => {
+												// Find the volume by path
+												const volumes = fm.files();
+												let targetHash = null;
+												
+												// Look through all files to find the volume root with matching path
+												for (const hash in volumes) {
+													const file = volumes[hash];
+													if (file.path === path && file.mime === 'directory' && file.netkey) {
+														targetHash = file.hash;
+														break;
+													}
+												}
+												
+												if (!targetHash) {
+													reject(new Error('Volume not found for path: ' + path));
+													return;
+												}
+												
+												fm.request({
+													data: {
+														cmd: 'netmount',
+														protocol: 'netunmount',
+														user: targetHash,
+														host: 'dummy',
+														pass: 'dum'
+													},
+													preventFail: true,
+													notify: { type: 'netunmount', cnt: 1, hideCnt: true }
+												}).done(function (data) {
+													if (data.removed && data.removed.length) {
+														fm.one('netunmountdone', function () {
+															resolve();
+														});
+													} else {
+														resolve();
+													}
+												}).fail(reject);
+											});
+										}
 									});
 								})
 							}
@@ -202,8 +281,55 @@
 								// get the a list of query `mount` values and mount them
 								const query = new URLSearchParams(window.location.search);
 								const mounts = query.getAll('mount')
-								for (const host of mounts) {
-									mount(host).catch(console.error);
+								if(mounts.length > 0) {
+									// Wait for a short delay to ensure elFinder is fully initialized
+									setTimeout(() => {
+										Promise.all(mounts.map(host => {
+											if(!host) return;
+											let data = null;
+											if(host.startsWith("s3://")){
+												data = {
+													cmd: 'netmount',
+													protocol: 's3',
+													host,
+												}
+											}
+											else if(host.startsWith("http") && host.includes("/services/")){
+												data = {
+													cmd: 'netmount',
+													protocol: 'hyphafs',
+													host,
+													workspace: query.get('workspace'),
+													token: query.get('token'),
+												}
+											}
+											else if(host.startsWith("http") && host.includes("/artifacts/")){
+												data = {
+													cmd: 'netmount',
+													protocol: 'hypha_artifacts',
+													host,
+													workspace: query.get('workspace'),
+													token: query.get('token'),
+												}
+											}
+											if(!data) return;
+											return fm.request({
+												data,
+												preventFail: true,
+												notify: { type: 'netmount', cnt: 1, hideCnt: true }
+											}).then((data)=>{
+												if (data.added && data.added.length) {
+													// Just mount but don't automatically open/download
+													fm.one('netmountdone', function () {
+														fm.exec('open', data.added[0].hash);
+														fm.one('opendone', function () {
+															data.toast && fm.toast(data.toast);
+														});
+													});
+												}
+											})
+										})).catch(console.error);
+									}, 1000);
 								}
 							}
 						})
