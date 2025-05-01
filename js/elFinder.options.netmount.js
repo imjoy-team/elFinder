@@ -5,6 +5,18 @@
  */
 
 elFinder.prototype._options.commandsOptions.netmount = {
+	hyphafs: {
+		name: 'Hypha',
+		inputs: {
+			host  : $('<input type="text" placeholder="https://.../services/..." value=""/>')
+		}
+	},
+	hypha_artifacts: {
+		name: 'Hypha Artifacts',
+		inputs: {
+			host  : $('<input type="text" placeholder="https://.../artifacts/..." value=""/>')
+		}
+	},
 	s3: {
 		name : 'S3',
 		inputs: {
