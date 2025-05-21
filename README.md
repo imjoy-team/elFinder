@@ -178,19 +178,19 @@ async def setup():
     fm = await api.showDialog(
         src="https://fm.imjoy.io"
     )
-    await fm.mount("https://hypha.aicell.io/workspace/example-dataset", {"token": token})
+    await fm.mount("https://hypha.aicell.io/workspace-name/artifacts/example-dataset", {"token": token})
 
 api.export({"setup": setup})
 ```
 
 You can also access artifacts directly through the elFinder URL:
 ```
-https://fm.imjoy.io/?mount=https://hypha.aicell.io/workspace/artifact-alias
+https://fm.imjoy.io/?mount=https://hypha.aicell.io/workspace-name/artifacts/artifact-alias
 ```
 
 For private artifacts that require authentication, append a token:
 ```
-https://fm.imjoy.io/?mount=https://hypha.aicell.io/workspace/artifact-alias&token=your-token
+https://fm.imjoy.io/?mount=https://hypha.aicell.io/workspace-name/artifacts/artifact-alias&token=your-token
 ```
 
 #### Using elFinder with Artifact Manager in ImJoy
@@ -205,7 +205,7 @@ async def setup():
         src="https://jupyter.imjoy.io/elFinder"
     )
     # Mount an artifact with optional authentication
-    await fm.mount("https://hypha.aicell.io/workspace/artifact-alias", {"token": "your-token"})
+    await fm.mount("https://hypha.aicell.io/workspace-name/artifacts/artifact-alias", {"token": "your-token"})
     
 api.export({"setup": setup})
 ```
@@ -243,7 +243,7 @@ api.export({"setup": setup})
 elFinder uses a service worker for managing file operations and caching. Sometimes you may need to force the service worker to upgrade, especially after updates to the elFinder codebase. You can force an upgrade by adding the `upgrade=1` parameter to the URL:
 
 ```
-https://fm.imjoy.io/?mount=https://hypha.aicell.io/workspace/artifact-alias&upgrade=1
+https://fm.imjoy.io/?mount=https://hypha.aicell.io/workspace-name/artifacts/artifact-alias&upgrade=1
 ```
 
 **Note:** After adding the upgrade parameter, you may need to refresh the page a few times in your browser for the upgrade to take effect. This is because service worker updates follow a specific lifecycle and may require multiple refreshes to fully activate.
@@ -255,7 +255,7 @@ async def setup():
     fm = await api.showDialog(
         src="https://jupyter.imjoy.io/elFinder?upgrade=1"
     )
-    await fm.mount("https://hypha.aicell.io/workspace/artifact-alias")
+    await fm.mount("https://hypha.aicell.io/workspace-name/artifacts/artifact-alias")
 
 api.export({"setup": setup})
 ```
