@@ -488,6 +488,9 @@ api.ls = function (opts, res) {
 	return new Promise(function (resolve, reject) {
 		if (!opts.target) return reject('errCmdParams');
 		var info = _private.decode(opts.target);
+		if (!info) {
+			return reject('Invalid target path or volume not mounted');
+		}
 		_private.readdir(info.absolutePath)
 			.then(function (files) {
 				var _files = files.map(function (e) {
@@ -508,6 +511,9 @@ api.ls = function (opts, res) {
 //TODO check permission.
 api.mkfile = async function (opts, res) {
 	var dir = _private.decode(opts.target);
+	if (!dir) {
+		throw new Error('Invalid target path or volume not mounted');
+	}
 	var _file = path.join(dir.absolutePath, opts.name);
 	const handle = await fs.open(_file, 'w');
 	await fs.close(handle)
@@ -519,6 +525,9 @@ api.mkfile = async function (opts, res) {
 //TODO check permission.
 api.mkdir = async function (opts, res) {
 	var dir = _private.decode(opts.target);
+	if (!dir) {
+		throw new Error('Invalid target path or volume not mounted');
+	}
 	var dirs = opts.dirs || [];
 	if (opts.name) {
 		dirs.push(opts.name);
@@ -751,8 +760,8 @@ api.netmount = function (opts, res) {
 				return;
 			}
 			
-			const workspace = parts[0].replace(/^\//, ''); // Remove leading slash
-			const artifactAlias = parts[1].replace(/\/$/, ''); // Remove trailing slash
+			const workspace = decodeURIComponent(parts[0].replace(/^\//, ''));
+			const artifactAlias = decodeURIComponent(parts[1].replace(/\/$/, ''));
 			const fullArtifactId = `${workspace}/${artifactAlias}`;
 			const token = opts.token;
 			console.log('Extracted artifact info:', { serverUrl, workspace, artifactAlias, fullArtifactId, token });
@@ -809,8 +818,9 @@ api.netmount = function (opts, res) {
 							// update fs
 							fs = patchFs();
 							console.log('Mounted Hypha Artifacts at', mountedPath);
-							// Add to volumes first
-							const netkey = addNetworkVolume(mountedPath, { read: 1, write: 0, locked: 1 }, 'hypha_artifacts');
+							// Add to volumes first - permissions based on token availability
+							const permissions = token ? { read: 1, write: 1, locked: 0 } : { read: 1, write: 0, locked: 1 };
+							const netkey = addNetworkVolume(mountedPath, permissions, 'hypha_artifacts');
 
 							setTimeout(() => {
 								_private.info(mountedPath).then((info) => {
@@ -890,6 +900,9 @@ api.parents = function (opts, res) {
 	return new Promise(function (resolve, reject) {
 		if (!opts.target) return reject('errCmdParams');
 		var dir = _private.decode(opts.target);
+		if (!dir) {
+			return reject('Invalid target path or volume not mounted');
+		}
 		var tree;
 		_private.init()
 			.then(function (results) {
@@ -977,6 +990,9 @@ api.paste = function (opts, res) {
 api.rename = function (opts, res) {
 	if (!opts.target) return Promise.reject('errCmdParams');
 	var dir = _private.decode(opts.target);
+	if (!dir) {
+		return Promise.reject('Invalid target path or volume not mounted');
+	}
 	var dirname = path.dirname(dir.absolutePath);
 	return _private.move({
 		src: dir.absolutePath,
@@ -986,6 +1002,9 @@ api.rename = function (opts, res) {
 
 api.resize = async function (opts, res) {
 	const target = _private.decode(opts.target);
+	if (!target) {
+		throw new Error('Invalid target path or volume not mounted');
+	}
 	let image = await jimpRead(await fs.readFile(target.absolutePath))
 
 	if (opts.mode == 'resize') {
@@ -1029,6 +1048,10 @@ api.rm = function (opts, res) {
 		for (let hash of opts.targets) {
 			try {
 				var target = _private.decode(hash);
+				if (!target) {
+					console.log('Invalid target path or volume not mounted:', hash);
+					continue; // Skip this target and continue with others
+				}
 				if ((await fs.lstat(target.absolutePath)).isDirectory())
 					await removeDir(target.absolutePath)
 				else
@@ -1206,7 +1229,7 @@ api.upload = function (opts, res) {
 		for (let i = 0; i < files.length; i++) {
 			const target = _private.decode(opts.targets[i]);
 			targets.push(target)
-
+			console.log('uploading file', target, files[i])
 			if (opts.chunk && opts.range) {
 				const tmp = opts.chunk.split(".")
 				const name = tmp.slice(0, tmp.length - 2).join(".")

@@ -40,8 +40,8 @@ export class ArtifactFile extends BaseFile {
         if (this._content === null) {
             try {
                 // Get file URL from the artifact manager
-                const url = await this._parent._artifactManager.get_file(
-                    this._parent._artifactId,
+                const url = await this._parent.artifactManager.get_file(
+                    this._parent.artifactId,
                     this._fileData.path
                 );
                 
@@ -195,17 +195,27 @@ export class ArtifactFile extends BaseFile {
 
             // Get upload URL if we don't have one
             if (!this._writeStream) {
-                const putUrl = await this._parent._artifactManager.put_file(
-                    this._parent._artifactId,
-                    this._fileData.path,
-                    this._fileData.download_weight || 0
-                );
+                // First, put the artifact in staging mode
+                await this._parent.artifactManager.edit({
+                    artifact_id: this._parent.artifactId,
+                    stage: true,
+                    comment: "File upload via elFinder",
+
+                    _rkwargs: true
+                });
+
+                const putUrl = await this._parent.artifactManager.put_file({
+                    artifact_id: this._parent.artifactId,
+                    file_path: this._fileData.path,
+                    download_weight: this._fileData.download_weight || 0,
+                    _rkwargs: true
+                });
                 
                 // Create write stream using fetch
                 this._writeStream = await fetch(putUrl, {
                     method: 'PUT',
                     headers: {
-                        'Content-Type': 'application/octet-stream'
+                        'Content-Type': ''
                     },
                     body: combinedBuffer
                 });
@@ -213,6 +223,13 @@ export class ArtifactFile extends BaseFile {
                 if (!this._writeStream.ok) {
                     throw new Error(`Failed to upload file: ${this._writeStream.statusText}`);
                 }
+
+                // After successful upload, commit the artifact
+                await this._parent.artifactManager.commit({
+                    artifact_id: this._parent.artifactId,
+                    comment: "File upload completed via elFinder",
+                    _rkwargs: true
+                });
             }
 
             // Clear buffer
@@ -238,8 +255,10 @@ export class ArtifactFile extends BaseFile {
     }
 
     async truncate(len, cb) {
-        // ArtifactFileSystem is read-only
-        cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        if (this._parent.readOnly) {
+            return cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        }
+        cb(new ApiError(ErrorCode.ENOTSUP, "File truncation not supported"));
     }
 
     truncateSync(_len) {
@@ -249,7 +268,10 @@ export class ArtifactFile extends BaseFile {
     // No-op implementations for unsupported operations
     
     async chown(uid, gid, cb) {
-        cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        if (this._parent.readOnly) {
+            return cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        }
+        cb(new ApiError(ErrorCode.ENOTSUP, "File ownership change not supported"));
     }
 
     chownSync(_uid, _gid) {
@@ -257,7 +279,10 @@ export class ArtifactFile extends BaseFile {
     }
 
     async chmod(mode, cb) {
-        cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        if (this._parent.readOnly) {
+            return cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        }
+        cb(new ApiError(ErrorCode.ENOTSUP, "File permission change not supported"));
     }
 
     chmodSync(_mode) {
@@ -265,7 +290,10 @@ export class ArtifactFile extends BaseFile {
     }
 
     async utimes(atime, mtime, cb) {
-        cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        if (this.readOnly) {
+            return cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        }
+        cb(new ApiError(ErrorCode.ENOTSUP, "File time modification not supported"));
     }
 
     utimesSync(_atime, _mtime) {
@@ -342,7 +370,7 @@ export class ArtifactFileSystem extends BaseFileSystem {
         this._directoryCache = new Map(); // Cache directory existence
         this.isCollection = false;
         this.childArtifacts = null;
-        this.readOnly = config.readOnly || true;
+        this.readOnly = config.readOnly !== undefined ? config.readOnly : true;
     }
 
     /**
@@ -531,7 +559,7 @@ export class ArtifactFileSystem extends BaseFileSystem {
         console.debug('ArtifactFileSystem.open', { path: p, flag, mode });
         
         try {
-            if (flag.isWriteable()) {
+            if (flag.isWriteable() && this.readOnly) {
                 return cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
             }
             
@@ -543,20 +571,36 @@ export class ArtifactFileSystem extends BaseFileSystem {
                 return cb(new ApiError(ErrorCode.EISDIR, "Path is a directory"));
             }
             
-            // Check if we have the file metadata cached
+            const fileName = normalizedPath.substring(normalizedPath.lastIndexOf('/') + 1 || 0);
+            
+            // For write mode, create a new file regardless of cache or existence
+            if (flag.isWriteable()) {
+                const standardFileInfo = {
+                    path: normalizedPath,
+                    name: fileName,
+                    size: 0,
+                    mtime: Date.now(),
+                };
+                
+                // Cache the file info
+                this._fileCache.set(normalizedPath, standardFileInfo);
+                
+                return cb(null, new ArtifactFile(standardFileInfo, this));
+            }
+            
+            // For read mode, check cache first
             if (this._fileCache.has(normalizedPath)) {
                 return cb(null, new ArtifactFile(this._fileCache.get(normalizedPath), this));
             }
             
-            // Find the file in its parent directory
+            // Find the file in its parent directory for read mode
             const parentPath = normalizedPath.substring(0, normalizedPath.lastIndexOf('/') || 0);
-            const fileName = normalizedPath.substring(normalizedPath.lastIndexOf('/') + 1 || 0);
             
             try {
                 const parentListing = await this._getDirectoryListing(parentPath);
                 
                 // Find the file in the directory listing
-                const fileInfo = parentListing.files.find(file => {
+                const fileInfo = parentListing.find(file => {
                     // Handle different file info formats
                     if (typeof file === 'string') {
                         return file === fileName;
@@ -587,27 +631,7 @@ export class ArtifactFileSystem extends BaseFileSystem {
                 cb(null, new ArtifactFile(standardFileInfo, this));
             } catch (err) {
                 console.error('Error getting parent directory listing:', err);
-                
-                // Try to get file stats directly if parent listing fails
-                try {
-                    const fileStats = await this.artifactManager.getFileStats(normalizedPath);
-                    
-                    // Create file info from stats
-                    const standardFileInfo = {
-                        path: normalizedPath,
-                        name: fileName,
-                        size: fileStats.size || 0,
-                        mtime: fileStats.mtime || Date.now(),
-                    };
-                    
-                    // Cache the file info
-                    this._fileCache.set(normalizedPath, standardFileInfo);
-                    
-                    cb(null, new ArtifactFile(standardFileInfo, this));
-                } catch (statsErr) {
-                    console.error('Failed to get file stats:', statsErr);
-                    cb(ApiError.ENOENT(p));
-                }
+                cb(ApiError.ENOENT(p));
             }
         } catch (err) {
             console.error('ArtifactFileSystem.open - error', err);
@@ -739,11 +763,17 @@ export class ArtifactFileSystem extends BaseFileSystem {
     }
 
     async rmdir(p, cb) {
-        cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        if (this.readOnly) {
+            return cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        }
+        cb(new ApiError(ErrorCode.ENOTSUP, "Directory removal not supported"));
     }
 
     async mkdir(p, mode, cb) {
-        cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        if (this.readOnly) {
+            return cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        }
+        cb(new ApiError(ErrorCode.ENOTSUP, "Directory creation not supported"));
     }
 
     exists(p, cb) {
@@ -760,7 +790,10 @@ export class ArtifactFileSystem extends BaseFileSystem {
     }
 
     truncate(p, len, cb) {
-        cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        if (this.readOnly) {
+            return cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        }
+        cb(new ApiError(ErrorCode.ENOTSUP, "File truncation not supported"));
     }
 
     async readFile(fname, encoding, flag, cb) {
@@ -823,7 +856,10 @@ export class ArtifactFileSystem extends BaseFileSystem {
     }
 
     appendFile(fname, data, encoding, flag, mode, cb) {
-        cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        if (this.readOnly) {
+            return cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        }
+        cb(new ApiError(ErrorCode.ENOTSUP, "File append not supported"));
     }
 
     chmod(p, isLchmod, mode, cb) {
@@ -835,7 +871,10 @@ export class ArtifactFileSystem extends BaseFileSystem {
     }
 
     utimes(p, atime, mtime, cb) {
-        cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        if (this.readOnly) {
+            return cb(new ApiError(ErrorCode.EPERM, "Read-only file system"));
+        }
+        cb(new ApiError(ErrorCode.ENOTSUP, "File time modification not supported"));
     }
 
     link(srcpath, dstpath, cb) {

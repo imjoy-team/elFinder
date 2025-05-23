@@ -29,11 +29,13 @@ export function handleHyphaFs(opts) {
         const workspace = opts.host.replace(server_url, '').split('/services/')[0].replace(/\//g, '');
         const serviceId = workspace + "/" + url.pathname.split('/services/')[1].replace(/\//g, '');
         const token = url.searchParams.get('token');
+        const userWorkspace = url.searchParams.get('workspace');
         
         console.log('Connecting to Hypha File System Service at', server_url, serviceId, token);
         
         hyphaWebsocketClient.connectToServer({
             server_url: server_url,
+            workspace: userWorkspace,
             token: token
         }).then(async (server) => {
             try {
