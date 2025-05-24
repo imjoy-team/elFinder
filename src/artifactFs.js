@@ -200,7 +200,6 @@ export class ArtifactFile extends BaseFile {
                     artifact_id: this._parent.artifactId,
                     stage: true,
                     comment: "File upload via elFinder",
-
                     _rkwargs: true
                 });
 
@@ -404,7 +403,7 @@ export class ArtifactFileSystem extends BaseFileSystem {
             this.isCollection = artifact.type === 'collection';
             
             if (this.isCollection) {
-                const children = await this.artifactManager.list(this.artifactId);
+                const children = await this.artifactManager.list({artifact_id: this.artifactId, stage: "all", _rkwargs: true});
                 console.debug('ArtifactFileSystem - collection children fetched', { children });
                 
                 this.childArtifacts = children.map(child => ({
